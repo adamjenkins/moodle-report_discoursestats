@@ -59,10 +59,12 @@ A separate "Add grading schedule" form lets teachers configure a grade item that
 
 - **Grade item name** — appears in the Moodle gradebook
 - **Grade formula** — mathematical expression using report field names (e.g. `min(replies * 2 + posts * 5, 100)`)
-- **Feedback template** — plain-text template with `{fieldname}` placeholders
+- **Feedback template** — plain-text template with `{fieldname}` placeholders (NULL numeric fields substitute `0`)
 - **Maximum grade** — caps the calculated value
 - **Grade category** — target gradebook category
 - **Hidden** — hide the grade item from students
+
+Existing grading schedules can be duplicated with the **Copy** link in the schedules table.
 
 Supported formula functions: `min()`, `max()`, `round()`, `ceil()`, `floor()`, `abs()`.
 
@@ -86,9 +88,12 @@ Under **Site administration → Plugins → Reports → Discourse Stats**:
 
 ## Report scheduling
 
-Reports are processed by a scheduled task (`\report_discoursestats\task\schedule_task`) that runs hourly and picks up any queued reports at the configured execution hours. Users with `getinstantreport` can bypass the queue and receive results immediately.
+Reports are processed by a scheduled task (`\report_discoursestats\task\schedule_task`) that runs every 5 minutes:
 
-Grading schedules are processed by an ad-hoc task (`\report_discoursestats\task\grading_task`) queued automatically once the report's end date passes.
+- **Grading schedules whose end date has passed** are detected and processed immediately on the next task run, regardless of the configured execution hours.
+- **Regular report schedules** (and grading schedules whose end date has not yet passed) are only processed at the configured execution hours.
+
+Users with `getinstantreport` can bypass the queue and receive results immediately.
 
 ## License
 

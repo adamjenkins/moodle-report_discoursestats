@@ -5,6 +5,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.0] — 2026-06-30
+
+### Added
+
+- **Copy action for grading schedules** — each grading schedule row in the "Automatically generated grades" table now has a "Copy" link that pre-populates the grading form with all settings from the selected schedule, allowing quick duplication.
+- **Overdue grading schedule processing** — grading schedules whose end date has already passed are now detected and processed immediately on the next scheduled task run, before the configured execution-hour guard is applied. This ensures grades are pushed within 5 minutes of the end date rather than waiting for the next configured execution hour.
+
+### Fixed
+
+- **Grading schedules purged on new report request** — running a new report for a user previously deleted all their older schedules and results, including grading schedules. The DELETE statements in `discoursestats_executeschedule()` now exclude grading schedules (`gradingname IS NULL OR gradingname = ''`).
+- **Feedback template blank for NULL numeric fields** — fields such as `dbcomments` are NULL for users with no database activity. `discoursestats_apply_feedback_template()` now substitutes `'0'` (instead of `''`) for NULL values in formula fields, so expressions like `{posts}+{replies}+{dbentries}+{dbcomments}` render correctly.
+- **Grades silently not pushed to gradebook** — `grade_update()` with `itemtype='report'` always returns `GRADE_UPDATE_FAILED` because `is_raw_used()` requires `is_external_item()` which only returns true for `itemtype='mod'`. `discoursestats_push_grades()` has been rewritten to use `itemtype='manual'` grade items identified by `idnumber='discoursestats_N'`, with grades written via `grade_item::update_final_grade()`, which bypasses all module-callback paths.
+- **Scheduled task fired hourly instead of every 5 minutes** — `db/tasks.php` now sets `'minute' => '*/5'` so the task runs every 5 minutes, enabling faster report and grade processing.
+
+---
+
 ## [1.0.0] — 2026-06-29
 
 Initial release.
