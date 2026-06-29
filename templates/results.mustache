@@ -25,7 +25,8 @@
                 "reporturl": "/report/outline/user.php?id=5&course=2&mode=complete"
             }
         ],
-        "empty": false
+        "empty": false,
+        "showreportlink": true
     }
 }}
 <hr>
@@ -48,7 +49,7 @@
                     </a>
                 </th>
                 {{/headers}}
-                <th>{{#str}} completereport, report_discoursestats {{/str}}</th>
+                {{#showreportlink}}<th>{{#str}} completereport, report_discoursestats {{/str}}</th>{{/showreportlink}}
             </tr>
         </thead>
         <tbody>
@@ -57,11 +58,13 @@
                 {{#records}}
                 <td>{{.}}</td>
                 {{/records}}
+                {{#showreportlink}}
                 <td>
                     <a href="{{{reporturl}}}" target="_blank">
                         {{#str}} view, report_discoursestats {{/str}}
                     </a>
                 </td>
+                {{/showreportlink}}
             </tr>
             {{/rows}}
         </tbody>

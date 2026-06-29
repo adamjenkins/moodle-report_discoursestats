@@ -29,6 +29,8 @@
                 <FIELD NAME="gradingcategory" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="Grade category ID; 0 means course top category"/>
                 <FIELD NAME="gradinghidden" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" COMMENT="Whether the grade item is hidden in the gradebook"/>
                 <FIELD NAME="gradingtriggered" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" COMMENT="Whether the adhoc grading task has been queued"/>
+                <FIELD NAME="reporttype" TYPE="int" LENGTH="2" NOTNULL="false" DEFAULT="1" COMMENT="1=student, 2=group, 5=country"/>
+                <FIELD NAME="hiddencolumns" TYPE="text" NOTNULL="false" COMMENT="JSON array of column keys hidden in the student results view"/>
             </FIELDS>
             <KEYS>
                 <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
@@ -37,6 +39,48 @@
                 <INDEX NAME="status_idx" UNIQUE="false" FIELDS="status"/>
                 <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid"/>
                 <INDEX NAME="course_idx" UNIQUE="false" FIELDS="course"/>
+            </INDEXES>
+        </TABLE>
+        <TABLE NAME="discoursestats_aggregate_results" COMMENT="Discourse Stats Group/Country Aggregate Report Results">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="schedule" TYPE="int" LENGTH="10" NOTNULL="true"/>
+                <FIELD NAME="reporttype" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="2" COMMENT="2=group, 5=country"/>
+                <FIELD NAME="rowid" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Group ID, or 0 for country rows"/>
+                <FIELD NAME="rowname" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Group name or country name"/>
+                <FIELD NAME="activemembers" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="inactivemembers" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="nationalities" TYPE="int" LENGTH="10" NOTNULL="false" COMMENT="Distinct countries in group (null for country rows)"/>
+                <FIELD NAME="posts" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="replies" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="stalereply" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="selfreply" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="repliestoseed" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="uniquedaysactive" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="views" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="uniquedaysviewed" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="wordcount" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="multimedia" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="images" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="videos" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="audios" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="links" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="dbentries" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="dbcomments" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement1" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement2" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement3" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement4" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="averageengagement" TYPE="float" NOTNULL="false"/>
+                <FIELD NAME="maximumengagement" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="reactionsgiven" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="reactionsreceived" TYPE="int" LENGTH="10" NOTNULL="false"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+            </KEYS>
+            <INDEXES>
+                <INDEX NAME="schedule_idx" UNIQUE="false" FIELDS="schedule"/>
             </INDEXES>
         </TABLE>
         <TABLE NAME="discoursestats_results" COMMENT="Discourse Stats Report Results">

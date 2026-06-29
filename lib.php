@@ -36,6 +36,13 @@ const DISCOURSESTATS_STATUS_FINISH    = 3;
 /** @var int Schedule status: run manually without scheduling. */
 const DISCOURSESTATS_STATUS_MANUAL    = 4;
 
+/** @var int Report type: per-student results. */
+const DISCOURSESTATS_REPORTTYPE_STUDENT = 1;
+/** @var int Report type: per-group aggregate results. */
+const DISCOURSESTATS_REPORTTYPE_GROUP   = 2;
+/** @var int Report type: per-country aggregate results. */
+const DISCOURSESTATS_REPORTTYPE_COUNTRY = 5;
+
 /**
  * Add the report link to the course navigation.
  *
@@ -65,6 +72,7 @@ function report_discoursestats_extend_navigation_course($navigation, $course, $c
 function discoursestats_removeschedule(int $scheduleid) {
     global $DB;
     $DB->delete_records('discoursestats_results', ['schedule' => $scheduleid]);
+    $DB->delete_records('discoursestats_aggregate_results', ['schedule' => $scheduleid]);
     $DB->delete_records('discoursestats_grading_log', ['scheduleid' => $scheduleid]);
     $DB->delete_records('discoursestats_schedules', ['id' => $scheduleid]);
 }
@@ -117,6 +125,11 @@ function discoursestats_addschedule(\stdClass $formdata, \core\context\course $c
     // Multi-forum selection: store as JSON.
     $forums = !empty($formdata->forums) ? $formdata->forums : [];
     $schedule->forums = count($forums) > 0 ? json_encode(array_map('intval', $forums)) : null;
+
+    $schedule->reporttype    = (int)($formdata->reporttype ?? DISCOURSESTATS_REPORTTYPE_STUDENT);
+    $schedule->hiddencolumns = !empty($formdata->hiddencolumns) && is_array($formdata->hiddencolumns)
+        ? json_encode(array_values(array_map('strval', $formdata->hiddencolumns)))
+        : null;
 
     // Database modules: null = disabled; '[]' = all; '[1,2]' = specific IDs.
     if (!empty($formdata->includedbinstances)) {
@@ -699,6 +712,41 @@ function discoursestats_reactforuminstalled(): bool {
 }
 
 /**
+ * Check if local_reactforum is installed and configured for at least one of the covered forums.
+ *
+ * A forum is considered "enabled" if it has a local_reactforum_settings record with
+ * reactiontype != 'none' at the forum level (not a discussion-level override).
+ *
+ * @param int[] $forumids  Empty array = all forums in course.
+ * @param int   $courseid
+ * @return bool
+ */
+function discoursestats_reactforumenabledforforums(array $forumids, int $courseid): bool {
+    global $DB;
+    if (!discoursestats_reactforuminstalled()) {
+        return false;
+    }
+    if (empty($forumids)) {
+        return $DB->record_exists_sql(
+            "SELECT 1 FROM {local_reactforum_settings} s
+               JOIN {forum} f ON f.id = s.forum
+              WHERE f.course = :course
+                AND s.reactiontype != :none
+                AND s.discussion IS NULL",
+            ['course' => $courseid, 'none' => 'none']
+        );
+    }
+    [$insql, $inparams] = $DB->get_in_or_equal($forumids, SQL_PARAMS_NAMED, 'fid_');
+    return $DB->record_exists_sql(
+        "SELECT 1 FROM {local_reactforum_settings}
+          WHERE forum $insql
+            AND reactiontype != :none
+            AND discussion IS NULL",
+        array_merge($inparams, ['none' => 'none'])
+    );
+}
+
+/**
  * Count reactions given by a user in selected forums.
  *
  * @param int $userid
@@ -1119,7 +1167,16 @@ function discoursestats_calculatereport(\stdClass $schedule) {
         $results[] = $result;
     }
 
-    $DB->insert_records('discoursestats_results', $results);
+    $reporttype = (int)($schedule->reporttype ?? DISCOURSESTATS_REPORTTYPE_STUDENT);
+    if ($reporttype === DISCOURSESTATS_REPORTTYPE_GROUP) {
+        $aggregates = discoursestats_aggregatebygroup($results, $schedule);
+        $DB->insert_records('discoursestats_aggregate_results', $aggregates);
+    } else if ($reporttype === DISCOURSESTATS_REPORTTYPE_COUNTRY) {
+        $aggregates = discoursestats_aggregatebycountry($results, $schedule);
+        $DB->insert_records('discoursestats_aggregate_results', $aggregates);
+    } else {
+        $DB->insert_records('discoursestats_results', $results);
+    }
 }
 
 /**
@@ -1129,6 +1186,10 @@ function discoursestats_calculatereport(\stdClass $schedule) {
  */
 function discoursestats_maybe_queue_grading(\stdClass $schedule) {
     global $DB;
+
+    if ((int)($schedule->reporttype ?? DISCOURSESTATS_REPORTTYPE_STUDENT) !== DISCOURSESTATS_REPORTTYPE_STUDENT) {
+        return;
+    }
 
     if (
         empty($schedule->gradingname)
@@ -1145,6 +1206,37 @@ function discoursestats_maybe_queue_grading(\stdClass $schedule) {
 
     $schedule->gradingtriggered = 1;
     $DB->update_record('discoursestats_schedules', $schedule);
+}
+
+/**
+ * Return the ordered column keys that should be visible for a student report.
+ *
+ * Combines the user's hiddencolumns preference with automatic rules:
+ * DB columns are hidden when the schedule does not include DB data; reaction
+ * columns are hidden when local_reactforum is not installed or has no
+ * configured reactions for the covered forums.
+ *
+ * @param \stdClass $schedule
+ * @return string[]  Ordered visible column keys.
+ */
+function discoursestats_getvisiblecolumnkeys(\stdClass $schedule): array {
+    $allkeys = array_keys(discoursestats_getresultsheader());
+    $hidden  = !empty($schedule->hiddencolumns)
+        ? array_fill_keys((array)json_decode($schedule->hiddencolumns, true), true)
+        : [];
+
+    if ($schedule->dbinstances === null) {
+        $hidden['dbentries']  = true;
+        $hidden['dbcomments'] = true;
+    }
+
+    $forumids = discoursestats_getforumids($schedule);
+    if (!discoursestats_reactforumenabledforforums($forumids, $schedule->course)) {
+        $hidden['reactionsgiven']    = true;
+        $hidden['reactionsreceived'] = true;
+    }
+
+    return array_values(array_filter($allkeys, static fn($k) => !isset($hidden[$k])));
 }
 
 /**
@@ -1192,16 +1284,19 @@ function discoursestats_getresultsheader(): array {
 /**
  * Build sortable header context for the results template.
  *
- * @param int $scheduleid
+ * @param int      $scheduleid
+ * @param string[] $visiblekeys  Column keys to include (in order).
  * @param string|null $sortname
- * @param string $sorttype
+ * @param string   $sorttype
  * @return array
  */
-function discoursestats_getresultsheadercontext(int $scheduleid, $sortname = null, string $sorttype = 'asc'): array {
-    $sorttype    = strtolower($sorttype);
-    $fliptype    = $sorttype === 'asc' ? 'desc' : 'asc';
-    $items       = [];
-    foreach (discoursestats_getresultsheader() as $fieldname => $title) {
+function discoursestats_getresultsheadercontext(int $scheduleid, array $visiblekeys, $sortname = null, string $sorttype = 'asc'): array {
+    $sorttype   = strtolower($sorttype);
+    $fliptype   = $sorttype === 'asc' ? 'desc' : 'asc';
+    $allheaders = discoursestats_getresultsheader();
+    $items      = [];
+    foreach ($visiblekeys as $fieldname) {
+        $title   = $allheaders[$fieldname] ?? $fieldname;
         $items[] = [
             'name'    => $title,
             'sorturl' => new \moodle_url(
@@ -1216,51 +1311,55 @@ function discoursestats_getresultsheadercontext(int $scheduleid, $sortname = nul
 }
 
 /**
- * Convert a result record to an ordered array of display values.
+ * Convert a student result record to an ordered array of display values.
+ *
+ * Only values for keys in $visiblekeys are returned, in that order.
  *
  * @param \stdClass $record
+ * @param string[]  $visiblekeys  Column keys to include (in order).
  * @return array
  */
-function discoursestats_getresultsrow(\stdClass $record): array {
+function discoursestats_getresultsrow(\stdClass $record, array $visiblekeys): array {
     static $countries = [];
     if (!$countries) {
         $countries = get_string_manager()->get_list_of_countries();
     }
     $dateformat = get_string('strftimedatetimeshortaccurate', 'langconfig');
-    return [
-        $record->username,
-        $record->firstname,
-        $record->lastname,
-        $record->groups,
-        $countries[$record->country] ?? '',
-        $record->institution,
-        $record->posts,
-        $record->replies,
-        $record->stalereply,
-        $record->selfreply,
-        $record->repliestoseed,
-        $record->uniquedaysactive,
-        $record->views,
-        $record->uniquedaysviewed,
-        $record->wordcount,
-        $record->multimedia,
-        $record->images,
-        $record->videos,
-        $record->audios,
-        $record->links,
-        $record->dbentries,
-        $record->dbcomments,
-        $record->engagement1,
-        $record->engagement2,
-        $record->engagement3,
-        $record->engagement4,
-        $record->averageengagement,
-        $record->maximumengagement,
-        $record->firstpost ? userdate($record->firstpost, $dateformat) : '',
-        $record->lastpost ? userdate($record->lastpost, $dateformat) : '',
-        $record->reactionsgiven ?? '',
-        $record->reactionsreceived ?? '',
+    $all = [
+        'username'          => $record->username,
+        'firstname'         => $record->firstname,
+        'lastname'          => $record->lastname,
+        'groups'            => $record->groups,
+        'country'           => $countries[$record->country] ?? '',
+        'institution'       => $record->institution,
+        'posts'             => $record->posts,
+        'replies'           => $record->replies,
+        'stalereply'        => $record->stalereply,
+        'selfreply'         => $record->selfreply,
+        'repliestoseed'     => $record->repliestoseed,
+        'uniquedaysactive'  => $record->uniquedaysactive,
+        'views'             => $record->views,
+        'uniquedaysviewed'  => $record->uniquedaysviewed,
+        'wordcount'         => $record->wordcount,
+        'multimedia'        => $record->multimedia,
+        'images'            => $record->images,
+        'videos'            => $record->videos,
+        'audios'            => $record->audios,
+        'links'             => $record->links,
+        'dbentries'         => $record->dbentries,
+        'dbcomments'        => $record->dbcomments,
+        'engagement1'       => $record->engagement1,
+        'engagement2'       => $record->engagement2,
+        'engagement3'       => $record->engagement3,
+        'engagement4'       => $record->engagement4,
+        'averageengagement' => $record->averageengagement,
+        'maximumengagement' => $record->maximumengagement,
+        'firstpost'         => $record->firstpost ? userdate($record->firstpost, $dateformat) : '',
+        'lastpost'          => $record->lastpost  ? userdate($record->lastpost,  $dateformat) : '',
+        'reactionsgiven'    => $record->reactionsgiven    ?? '',
+        'reactionsreceived' => $record->reactionsreceived ?? '',
     ];
+    return array_values(array_map(static fn($k) => $all[$k] ?? '', $visiblekeys));
 }
 
 /**
@@ -1277,6 +1376,390 @@ function discoursestats_getsort($sortname, string $sorttype): string {
     }
     $sorttype = strtolower($sorttype) === 'desc' ? 'DESC' : 'ASC';
     return "{$sortname} {$sorttype}";
+}
+
+/**
+ * Return an ORDER BY clause for aggregate (group/country) result queries.
+ *
+ * @param string|null $sortname
+ * @param string      $sorttype
+ * @param int         $reporttype
+ * @param \stdClass   $schedule
+ * @return string
+ */
+function discoursestats_getaggregatesort($sortname, string $sorttype, int $reporttype, \stdClass $schedule): string {
+    $allowed = array_keys(discoursestats_getaggregateresultsheader($reporttype, $schedule));
+    if (!$sortname || !in_array($sortname, $allowed)) {
+        return 'rowname ASC';
+    }
+    $sorttype = strtolower($sorttype) === 'desc' ? 'DESC' : 'ASC';
+    return "{$sortname} {$sorttype}";
+}
+
+/**
+ * Return column headers (key => label) for group or country aggregate reports.
+ *
+ * @param int       $reporttype  DISCOURSESTATS_REPORTTYPE_GROUP or _COUNTRY
+ * @param \stdClass $schedule
+ * @return array
+ */
+function discoursestats_getaggregateresultsheader(int $reporttype, \stdClass $schedule): array {
+    $headers = [];
+    if ($reporttype === DISCOURSESTATS_REPORTTYPE_GROUP) {
+        $headers['rowname']         = get_string('group');
+        $headers['activemembers']   = get_string('activemembers', 'report_discoursestats');
+        $headers['inactivemembers'] = get_string('inactivemembers', 'report_discoursestats');
+        $headers['nationalities']   = get_string('nationalities', 'report_discoursestats');
+    } else {
+        $headers['rowname']         = get_string('country');
+        $headers['activemembers']   = get_string('activemembers', 'report_discoursestats');
+        $headers['inactivemembers'] = get_string('inactivemembers', 'report_discoursestats');
+    }
+    $headers['posts']             = get_string('posts');
+    $headers['replies']           = get_string('replies', 'report_discoursestats');
+    $headers['stalereply']        = get_string('stalereply', 'report_discoursestats');
+    $headers['selfreply']         = get_string('selfreply', 'report_discoursestats');
+    $headers['repliestoseed']     = get_string('repliestoseed', 'report_discoursestats');
+    $headers['uniquedaysactive']  = get_string('uniqueactive', 'report_discoursestats');
+    $headers['views']             = get_string('views', 'report_discoursestats');
+    $headers['uniquedaysviewed']  = get_string('uniqueview', 'report_discoursestats');
+    $headers['wordcount']         = get_string('wordcount', 'report_discoursestats');
+    $headers['multimedia']        = get_string('multimedia', 'report_discoursestats');
+    $headers['images']            = get_string('multimedia_image', 'report_discoursestats');
+    $headers['videos']            = get_string('multimedia_video', 'report_discoursestats');
+    $headers['audios']            = get_string('multimedia_audio', 'report_discoursestats');
+    $headers['links']             = get_string('multimedia_link', 'report_discoursestats');
+    if ($schedule->dbinstances !== null) {
+        $headers['dbentries']  = get_string('dbentries', 'report_discoursestats');
+        $headers['dbcomments'] = get_string('dbcomments', 'report_discoursestats');
+    }
+    $headers['engagement1']       = get_string('el1', 'report_discoursestats');
+    $headers['engagement2']       = get_string('el2', 'report_discoursestats');
+    $headers['engagement3']       = get_string('el3', 'report_discoursestats');
+    $headers['engagement4']       = get_string('el4up', 'report_discoursestats');
+    $headers['averageengagement'] = get_string('elavg', 'report_discoursestats');
+    $headers['maximumengagement'] = get_string('elmax', 'report_discoursestats');
+    $forumids = discoursestats_getforumids($schedule);
+    if (discoursestats_reactforumenabledforforums($forumids, $schedule->course)) {
+        $headers['reactionsgiven']    = get_string('reactionsgiven', 'report_discoursestats');
+        $headers['reactionsreceived'] = get_string('reactionsreceived', 'report_discoursestats');
+    }
+    return $headers;
+}
+
+/**
+ * Build sortable header context for an aggregate results table.
+ *
+ * @param int      $scheduleid
+ * @param string[] $visiblekeys
+ * @param array    $allheaders   key => label map from discoursestats_getaggregateresultsheader()
+ * @param string|null $sortname
+ * @param string   $sorttype
+ * @return array
+ */
+function discoursestats_getaggregateresultsheadercontext(int $scheduleid, array $visiblekeys, array $allheaders, $sortname = null, string $sorttype = 'asc'): array {
+    $sorttype = strtolower($sorttype);
+    $fliptype = $sorttype === 'asc' ? 'desc' : 'asc';
+    $items    = [];
+    foreach ($visiblekeys as $fieldname) {
+        $title   = $allheaders[$fieldname] ?? $fieldname;
+        $items[] = [
+            'name'    => $title,
+            'sorturl' => new \moodle_url(
+                '/report/discoursestats/view.php',
+                ['id' => $scheduleid, 'sn' => $fieldname, 'sd' => $sortname === $fieldname ? $fliptype : 'asc'],
+                'results'
+            ),
+            'icon' => $sortname === $fieldname ? ($sorttype === 'desc' ? 'fa-caret-down' : 'fa-caret-up') : null,
+        ];
+    }
+    return $items;
+}
+
+/**
+ * Convert an aggregate result record to an ordered array of display values.
+ *
+ * @param \stdClass $record
+ * @param string[]  $visiblekeys
+ * @return array
+ */
+function discoursestats_getaggregateresultsrow(\stdClass $record, array $visiblekeys): array {
+    $all = [
+        'rowname'           => $record->rowname,
+        'activemembers'     => $record->activemembers,
+        'inactivemembers'   => $record->inactivemembers,
+        'nationalities'     => $record->nationalities,
+        'posts'             => $record->posts,
+        'replies'           => $record->replies,
+        'stalereply'        => $record->stalereply,
+        'selfreply'         => $record->selfreply,
+        'repliestoseed'     => $record->repliestoseed,
+        'uniquedaysactive'  => $record->uniquedaysactive,
+        'views'             => $record->views,
+        'uniquedaysviewed'  => $record->uniquedaysviewed,
+        'wordcount'         => $record->wordcount,
+        'multimedia'        => $record->multimedia,
+        'images'            => $record->images,
+        'videos'            => $record->videos,
+        'audios'            => $record->audios,
+        'links'             => $record->links,
+        'dbentries'         => $record->dbentries,
+        'dbcomments'        => $record->dbcomments,
+        'engagement1'       => $record->engagement1,
+        'engagement2'       => $record->engagement2,
+        'engagement3'       => $record->engagement3,
+        'engagement4'       => $record->engagement4,
+        'averageengagement' => $record->averageengagement,
+        'maximumengagement' => $record->maximumengagement,
+        'reactionsgiven'    => $record->reactionsgiven,
+        'reactionsreceived' => $record->reactionsreceived,
+    ];
+    return array_values(array_map(static fn($k) => $all[$k] ?? '', $visiblekeys));
+}
+
+/**
+ * Aggregate per-student results into group-level totals.
+ *
+ * @param \stdClass[] $results   In-memory student result objects (not yet in DB).
+ * @param \stdClass   $schedule
+ * @return \stdClass[]
+ */
+function discoursestats_aggregatebygroup(array $results, \stdClass $schedule): array {
+    // Index results by userid.
+    $byuserid = [];
+    foreach ($results as $r) {
+        $byuserid[(int)$r->userid] = $r;
+    }
+
+    $allgroups = groups_get_all_groups($schedule->course);
+    if ($schedule->groupid) {
+        $allgroups = array_filter($allgroups, static fn($g) => $g->id == $schedule->groupid);
+    }
+
+    $aggregates = [];
+    foreach ($allgroups as $group) {
+        $members = groups_get_members($group->id, 'u.id');
+        if (!$members) {
+            continue;
+        }
+
+        $agg                    = new \stdClass();
+        $agg->schedule          = $schedule->id;
+        $agg->reporttype        = DISCOURSESTATS_REPORTTYPE_GROUP;
+        $agg->rowid             = $group->id;
+        $agg->rowname           = $group->name;
+        $agg->activemembers     = 0;
+        $agg->inactivemembers   = 0;
+        $agg->nationalities     = 0;
+        $agg->posts             = 0;
+        $agg->replies           = 0;
+        $agg->stalereply        = 0;
+        $agg->selfreply         = 0;
+        $agg->repliestoseed     = 0;
+        $agg->uniquedaysactive  = 0;
+        $agg->views             = 0;
+        $agg->uniquedaysviewed  = 0;
+        $agg->wordcount         = 0;
+        $agg->multimedia        = 0;
+        $agg->images            = 0;
+        $agg->videos            = 0;
+        $agg->audios            = 0;
+        $agg->links             = 0;
+        $agg->dbentries         = null;
+        $agg->dbcomments        = null;
+        $agg->engagement1       = 0;
+        $agg->engagement2       = 0;
+        $agg->engagement3       = 0;
+        $agg->engagement4       = 0;
+        $agg->averageengagement = null;
+        $agg->maximumengagement = 0;
+        $agg->reactionsgiven    = null;
+        $agg->reactionsreceived = null;
+
+        $countries       = [];
+        $engagementsum   = 0.0;
+        $engagementcount = 0;
+        $hasdb           = false;
+        $hasreactions    = false;
+
+        foreach ($members as $member) {
+            if (!isset($byuserid[$member->id])) {
+                $agg->inactivemembers++;
+                continue;
+            }
+            $r       = $byuserid[$member->id];
+            $isactive = ((int)($r->posts ?? 0) + (int)($r->replies ?? 0)) > 0;
+            if ($isactive) {
+                $agg->activemembers++;
+            } else {
+                $agg->inactivemembers++;
+            }
+
+            $agg->posts            += (int)($r->posts ?? 0);
+            $agg->replies          += (int)($r->replies ?? 0);
+            $agg->stalereply       += (int)($r->stalereply ?? 0);
+            $agg->selfreply        += (int)($r->selfreply ?? 0);
+            $agg->repliestoseed    += (int)($r->repliestoseed ?? 0);
+            $agg->uniquedaysactive += (int)($r->uniquedaysactive ?? 0);
+            $agg->views            += (int)($r->views ?? 0);
+            $agg->uniquedaysviewed += (int)($r->uniquedaysviewed ?? 0);
+            $agg->wordcount        += (int)($r->wordcount ?? 0);
+            $agg->multimedia       += (int)($r->multimedia ?? 0);
+            $agg->images           += (int)($r->images ?? 0);
+            $agg->videos           += (int)($r->videos ?? 0);
+            $agg->audios           += (int)($r->audios ?? 0);
+            $agg->links            += (int)($r->links ?? 0);
+            $agg->engagement1      += (int)($r->engagement1 ?? 0);
+            $agg->engagement2      += (int)($r->engagement2 ?? 0);
+            $agg->engagement3      += (int)($r->engagement3 ?? 0);
+            $agg->engagement4      += (int)($r->engagement4 ?? 0);
+            if (isset($r->averageengagement) && $r->averageengagement !== null) {
+                $engagementsum += (float)$r->averageengagement;
+                $engagementcount++;
+            }
+            $agg->maximumengagement = max($agg->maximumengagement, (int)($r->maximumengagement ?? 0));
+
+            if (!empty($r->country)) {
+                $countries[$r->country] = true;
+            }
+
+            if ($r->dbentries !== null) {
+                $hasdb           = true;
+                $agg->dbentries  = ((int)($agg->dbentries ?? 0)) + (int)($r->dbentries ?? 0);
+                $agg->dbcomments = ((int)($agg->dbcomments ?? 0)) + (int)($r->dbcomments ?? 0);
+            }
+            if (isset($r->reactionsgiven)) {
+                $hasreactions           = true;
+                $agg->reactionsgiven    = ((int)($agg->reactionsgiven ?? 0)) + (int)($r->reactionsgiven ?? 0);
+                $agg->reactionsreceived = ((int)($agg->reactionsreceived ?? 0)) + (int)($r->reactionsreceived ?? 0);
+            }
+        }
+
+        $agg->nationalities     = count($countries);
+        $agg->averageengagement = $engagementcount > 0 ? round($engagementsum / $engagementcount, 3) : null;
+        if (!$hasdb) {
+            $agg->dbentries = $agg->dbcomments = null;
+        }
+        if (!$hasreactions) {
+            $agg->reactionsgiven = $agg->reactionsreceived = null;
+        }
+        $aggregates[] = $agg;
+    }
+    return $aggregates;
+}
+
+/**
+ * Aggregate per-student results into country-level totals.
+ *
+ * @param \stdClass[] $results   In-memory student result objects (not yet in DB).
+ * @param \stdClass   $schedule
+ * @return \stdClass[]
+ */
+function discoursestats_aggregatebycountry(array $results, \stdClass $schedule): array {
+    $bycountry = [];
+    foreach ($results as $r) {
+        $key = $r->country ?? '';
+        $bycountry[$key][] = $r;
+    }
+
+    $countrylist = get_string_manager()->get_list_of_countries();
+    $aggregates  = [];
+
+    foreach ($bycountry as $countrycode => $countryresults) {
+        $agg                    = new \stdClass();
+        $agg->schedule          = $schedule->id;
+        $agg->reporttype        = DISCOURSESTATS_REPORTTYPE_COUNTRY;
+        $agg->rowid             = 0;
+        $agg->rowname           = !empty($countrycode)
+            ? ($countrylist[$countrycode] ?? $countrycode)
+            : get_string('unknowncountry', 'report_discoursestats');
+        $agg->activemembers     = 0;
+        $agg->inactivemembers   = 0;
+        $agg->nationalities     = null;
+        $agg->posts             = 0;
+        $agg->replies           = 0;
+        $agg->stalereply        = 0;
+        $agg->selfreply         = 0;
+        $agg->repliestoseed     = 0;
+        $agg->uniquedaysactive  = 0;
+        $agg->views             = 0;
+        $agg->uniquedaysviewed  = 0;
+        $agg->wordcount         = 0;
+        $agg->multimedia        = 0;
+        $agg->images            = 0;
+        $agg->videos            = 0;
+        $agg->audios            = 0;
+        $agg->links             = 0;
+        $agg->dbentries         = null;
+        $agg->dbcomments        = null;
+        $agg->engagement1       = 0;
+        $agg->engagement2       = 0;
+        $agg->engagement3       = 0;
+        $agg->engagement4       = 0;
+        $agg->averageengagement = null;
+        $agg->maximumengagement = 0;
+        $agg->reactionsgiven    = null;
+        $agg->reactionsreceived = null;
+
+        $engagementsum   = 0.0;
+        $engagementcount = 0;
+        $hasdb           = false;
+        $hasreactions    = false;
+
+        foreach ($countryresults as $r) {
+            $isactive = ((int)($r->posts ?? 0) + (int)($r->replies ?? 0)) > 0;
+            if ($isactive) {
+                $agg->activemembers++;
+            } else {
+                $agg->inactivemembers++;
+            }
+
+            $agg->posts            += (int)($r->posts ?? 0);
+            $agg->replies          += (int)($r->replies ?? 0);
+            $agg->stalereply       += (int)($r->stalereply ?? 0);
+            $agg->selfreply        += (int)($r->selfreply ?? 0);
+            $agg->repliestoseed    += (int)($r->repliestoseed ?? 0);
+            $agg->uniquedaysactive += (int)($r->uniquedaysactive ?? 0);
+            $agg->views            += (int)($r->views ?? 0);
+            $agg->uniquedaysviewed += (int)($r->uniquedaysviewed ?? 0);
+            $agg->wordcount        += (int)($r->wordcount ?? 0);
+            $agg->multimedia       += (int)($r->multimedia ?? 0);
+            $agg->images           += (int)($r->images ?? 0);
+            $agg->videos           += (int)($r->videos ?? 0);
+            $agg->audios           += (int)($r->audios ?? 0);
+            $agg->links            += (int)($r->links ?? 0);
+            $agg->engagement1      += (int)($r->engagement1 ?? 0);
+            $agg->engagement2      += (int)($r->engagement2 ?? 0);
+            $agg->engagement3      += (int)($r->engagement3 ?? 0);
+            $agg->engagement4      += (int)($r->engagement4 ?? 0);
+            if (isset($r->averageengagement) && $r->averageengagement !== null) {
+                $engagementsum += (float)$r->averageengagement;
+                $engagementcount++;
+            }
+            $agg->maximumengagement = max($agg->maximumengagement, (int)($r->maximumengagement ?? 0));
+
+            if ($r->dbentries !== null) {
+                $hasdb           = true;
+                $agg->dbentries  = ((int)($agg->dbentries ?? 0)) + (int)($r->dbentries ?? 0);
+                $agg->dbcomments = ((int)($agg->dbcomments ?? 0)) + (int)($r->dbcomments ?? 0);
+            }
+            if (isset($r->reactionsgiven)) {
+                $hasreactions           = true;
+                $agg->reactionsgiven    = ((int)($agg->reactionsgiven ?? 0)) + (int)($r->reactionsgiven ?? 0);
+                $agg->reactionsreceived = ((int)($agg->reactionsreceived ?? 0)) + (int)($r->reactionsreceived ?? 0);
+            }
+        }
+
+        $agg->averageengagement = $engagementcount > 0 ? round($engagementsum / $engagementcount, 3) : null;
+        if (!$hasdb) {
+            $agg->dbentries = $agg->dbcomments = null;
+        }
+        if (!$hasreactions) {
+            $agg->reactionsgiven = $agg->reactionsreceived = null;
+        }
+        $aggregates[] = $agg;
+    }
+    return $aggregates;
 }
 
 /**

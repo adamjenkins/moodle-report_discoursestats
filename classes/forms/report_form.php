@@ -66,7 +66,16 @@ class report_form extends \moodleform {
         $mform->addElement('header', 'filter', get_string('requestnewreport', 'report_discoursestats'));
         $mform->setExpanded('filter', $this->expanded);
 
-        // Engagement method (report type).
+        // Report type (student / group / country).
+        $mform->addElement('select', 'reporttype', get_string('reporttype', 'report_discoursestats'), [
+            DISCOURSESTATS_REPORTTYPE_STUDENT => get_string('reporttype_student', 'report_discoursestats'),
+            DISCOURSESTATS_REPORTTYPE_GROUP   => get_string('reporttype_group', 'report_discoursestats'),
+            DISCOURSESTATS_REPORTTYPE_COUNTRY => get_string('reporttype_country', 'report_discoursestats'),
+        ]);
+        $mform->setDefault('reporttype', DISCOURSESTATS_REPORTTYPE_STUDENT);
+        $mform->setType('reporttype', PARAM_INT);
+
+        // Engagement method (only applicable for student type).
         engagement::addtoform($mform, 'engagementmethod', null, 'engagementinternational', true);
 
         // Forum multi-select.
@@ -146,6 +155,28 @@ class report_form extends \moodleform {
         $mform->addElement('select', 'stalethreshold', get_string('stalethreshold', 'report_discoursestats'), $staledays);
         $mform->addHelpButton('stalethreshold', 'stalethreshold', 'report_discoursestats');
         $mform->setDefault('stalethreshold', 3);
+
+        // Hidden columns selector (only for student reports).
+        $columnoptions = [];
+        foreach (discoursestats_getresultsheader() as $key => $label) {
+            $columnoptions[$key] = $label;
+        }
+        $defaulthidden = [
+            'groups', 'country', 'institution', 'repliestoseed',
+            'wordcount', 'multimedia', 'images', 'videos', 'audios', 'links',
+            'engagement1', 'engagement2', 'engagement3', 'engagement4',
+            'firstpost', 'lastpost',
+        ];
+        $mform->addElement(
+            'autocomplete',
+            'hiddencolumns',
+            get_string('hiddencolumns', 'report_discoursestats'),
+            $columnoptions,
+            ['multiple' => true]
+        );
+        $mform->addHelpButton('hiddencolumns', 'hiddencolumns', 'report_discoursestats');
+        $mform->setDefault('hiddencolumns', $defaulthidden);
+        $mform->hideIf('hiddencolumns', 'reporttype', 'neq', (string)DISCOURSESTATS_REPORTTYPE_STUDENT);
 
         // Instant report checkbox (only shown to users with the capability).
         if (has_capability('report/discoursestats:getinstantreport', $this->coursecontext)) {

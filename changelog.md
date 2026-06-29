@@ -5,6 +5,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0] — 2026-06-30
+
+### Added
+
+- **Column visibility control** — the report form now has a "Hidden columns" multi-select (autocomplete) that lets teachers choose which columns to suppress from the results table and CSV export. The following columns are hidden by default: Group, Country, Institution, Direct replies to original post, Word count, Multimedia, Images, Videos, Audios, Links, 1st–4th+ Engagement, First Post, Last Post.
+- **Conditional DB columns** — the Database Entries and Database Comments columns are only included in student reports when "Include database module activity" was enabled for the schedule; otherwise they are omitted entirely.
+- **Conditional reactions columns** — the Reactions Given and Reactions Received columns are only included when `local_reactforum` is installed and at least one of the covered forums has reactions enabled (`reactiontype != 'none'` in `local_reactforum_settings`).
+- **Group report type** — a new "Group report" option aggregates per-student results into per-group rows, showing active members, inactive members, nationalities, and summed/averaged metrics for each group. Group reports are never used for grading.
+- **Country report type** — a new "Country report" option aggregates per-student results by country profile field, showing active members, inactive members, and summed/averaged metrics per country. Country reports are never used for grading.
+- Aggregate results (group and country) are stored in a new `discoursestats_aggregate_results` table so they can be re-viewed and downloaded after the initial run.
+- New DB fields: `discoursestats_schedules.reporttype` (INT, default 1) and `discoursestats_schedules.hiddencolumns` (TEXT, JSON array).
+
+---
+
 ## [1.1.0] — 2026-06-30
 
 ### Added

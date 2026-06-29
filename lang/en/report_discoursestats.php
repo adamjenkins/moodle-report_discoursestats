@@ -23,6 +23,9 @@
  */
 
 $string['actions'] = 'Actions';
+$string['activemembers'] = 'Active members';
+$string['inactivemembers'] = 'Inactive members';
+$string['nationalities'] = 'Nationalities';
 $string['addgradingschedule'] = 'Add grading schedule';
 $string['alldatabases'] = 'All databases in course';
 $string['allmygroups'] = 'All of my groups';
@@ -67,6 +70,8 @@ $string['forums'] = 'Forums';
 $string['forums_help'] = 'Select one or more forums to include in the report. Leave empty to include all forums in the course.';
 $string['getinstantreport'] = 'Get instant report result (without being scheduled)';
 $string['gradesettings'] = 'Grade settings';
+$string['hiddencolumns'] = 'Hidden columns';
+$string['hiddencolumns_help'] = 'Select columns to hide from the report view. These columns will not appear in the results table or CSV export.';
 $string['gradingcategory'] = 'Grade category';
 $string['gradingcategory_help'] = 'The grade category in which the grade item will be placed. Leave as "Course" to use the top-level grade category.';
 $string['gradingfeedback'] = 'Feedback template';
@@ -105,6 +110,10 @@ $string['privacy:metadata:discoursestats_schedules:course'] = 'The course for wh
 $string['privacy:metadata:discoursestats_schedules:createdtime'] = 'The time the report was requested.';
 $string['privacy:metadata:discoursestats_schedules:userid'] = 'The ID of the user who created the report request.';
 $string['reactionsgiven'] = 'Reactions Given';
+$string['reporttype'] = 'Report type';
+$string['reporttype_country'] = 'Country report';
+$string['reporttype_group'] = 'Group report';
+$string['reporttype_student'] = 'Student report';
 $string['reactionsreceived'] = 'Reactions Received';
 $string['replies'] = 'Replies';
 $string['repliestoseed'] = 'Direct replies to original post';
@@ -128,6 +137,7 @@ $string['status_finish'] = 'Finished';
 $string['status_manual'] = 'Manual Run';
 $string['status_scheduled'] = 'Scheduled';
 $string['uniqueactive'] = 'Unique days active';
+$string['unknowncountry'] = '(Unknown country)';
 $string['uniqueview'] = 'Unique days viewed';
 $string['videos'] = 'Videos';
 $string['view'] = 'View';

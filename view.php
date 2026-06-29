@@ -49,12 +49,24 @@ if ($action === 'download') {
         throw new \moodle_exception('error');
     }
     require_once($CFG->libdir . '/csvlib.class.php');
-    $csv = new \csv_export_writer();
+    $csv      = new \csv_export_writer();
     $csv->set_filename('discoursestats_' . $schedule->course . '_' . date('Ymd', $schedule->processedtime));
-    $csv->add_data(array_values(discoursestats_getresultsheader()));
-    $results = $DB->get_records('discoursestats_results', ['schedule' => $schedule->id]);
-    foreach ($results as $result) {
-        $csv->add_data(discoursestats_getresultsrow($result));
+    $reporttype = (int)($schedule->reporttype ?? DISCOURSESTATS_REPORTTYPE_STUDENT);
+    if ($reporttype === DISCOURSESTATS_REPORTTYPE_STUDENT) {
+        $visiblekeys = discoursestats_getvisiblecolumnkeys($schedule);
+        $allheaders  = discoursestats_getresultsheader();
+        $csv->add_data(array_values(array_intersect_key($allheaders, array_flip($visiblekeys))));
+        foreach ($DB->get_records('discoursestats_results', ['schedule' => $schedule->id]) as $result) {
+            $csv->add_data(discoursestats_getresultsrow($result, $visiblekeys));
+        }
+    } else {
+        $aggheaders  = discoursestats_getaggregateresultsheader($reporttype, $schedule);
+        $visiblekeys = array_keys($aggheaders);
+        $csv->add_data(array_values($aggheaders));
+        foreach ($DB->get_records_select('discoursestats_aggregate_results',
+            'schedule = :s AND reporttype = :t', ['s' => $schedule->id, 't' => $reporttype]) as $result) {
+            $csv->add_data(discoursestats_getaggregateresultsrow($result, $visiblekeys));
+        }
     }
     $csv->download_file();
     exit;
@@ -149,26 +161,55 @@ if ($action === 'view') {
     ]);
 
     if ($schedule->status == DISCOURSESTATS_STATUS_FINISH) {
-        $sortname = optional_param('sn', null, PARAM_ALPHANUMEXT);
-        $sorttype = optional_param('sd', 'asc', PARAM_ALPHA);
-        $sort     = discoursestats_getsort($sortname, $sorttype);
-        $results  = $DB->get_records('discoursestats_results', ['schedule' => $schedule->id], $sort);
-        $rows     = [];
-        foreach ($results as $result) {
-            $rows[] = [
-                'records'   => discoursestats_getresultsrow($result),
-                'reporturl' => new \moodle_url('/report/outline/user.php', [
-                    'id'     => $result->userid,
-                    'course' => $schedule->course,
-                    'mode'   => 'complete',
-                ]),
-            ];
+        $sortname   = optional_param('sn', null, PARAM_ALPHANUMEXT);
+        $sorttype   = optional_param('sd', 'asc', PARAM_ALPHA);
+        $reporttype = (int)($schedule->reporttype ?? DISCOURSESTATS_REPORTTYPE_STUDENT);
+
+        if ($reporttype === DISCOURSESTATS_REPORTTYPE_STUDENT) {
+            $visiblekeys = discoursestats_getvisiblecolumnkeys($schedule);
+            $sort        = discoursestats_getsort($sortname, $sorttype);
+            $results     = $DB->get_records('discoursestats_results', ['schedule' => $schedule->id], $sort);
+            $rows        = [];
+            foreach ($results as $result) {
+                $rows[] = [
+                    'records'   => discoursestats_getresultsrow($result, $visiblekeys),
+                    'reporturl' => new \moodle_url('/report/outline/user.php', [
+                        'id'     => $result->userid,
+                        'course' => $schedule->course,
+                        'mode'   => 'complete',
+                    ]),
+                ];
+            }
+            echo $OUTPUT->render_from_template('report_discoursestats/results', [
+                'headers'        => discoursestats_getresultsheadercontext($schedule->id, $visiblekeys, $sortname, $sorttype),
+                'rows'           => $rows,
+                'empty'          => count($rows) === 0,
+                'showreportlink' => true,
+            ]);
+        } else {
+            $aggheaders  = discoursestats_getaggregateresultsheader($reporttype, $schedule);
+            $visiblekeys = array_keys($aggheaders);
+            $sort        = discoursestats_getaggregatesort($sortname, $sorttype, $reporttype, $schedule);
+            $results     = $DB->get_records_select(
+                'discoursestats_aggregate_results',
+                'schedule = :s AND reporttype = :t',
+                ['s' => $schedule->id, 't' => $reporttype],
+                $sort
+            );
+            $rows = [];
+            foreach ($results as $result) {
+                $rows[] = [
+                    'records'   => discoursestats_getaggregateresultsrow($result, $visiblekeys),
+                    'reporturl' => null,
+                ];
+            }
+            echo $OUTPUT->render_from_template('report_discoursestats/results', [
+                'headers'        => discoursestats_getaggregateresultsheadercontext($schedule->id, $visiblekeys, $aggheaders, $sortname, $sorttype),
+                'rows'           => $rows,
+                'empty'          => count($rows) === 0,
+                'showreportlink' => false,
+            ]);
         }
-        echo $OUTPUT->render_from_template('report_discoursestats/results', [
-            'headers' => discoursestats_getresultsheadercontext($schedule->id, $sortname, $sorttype),
-            'rows'    => $rows,
-            'empty'   => count($rows) === 0,
-        ]);
     }
 } else if ($action === 'delete' && $deleteform) {
     $deleteform->display();

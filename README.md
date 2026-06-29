@@ -43,6 +43,16 @@ Three methods (selectable per report):
 - **Thread Total Count** — engagement level rises each time a user participates in the same thread
 - **Thread Engagement** — engagement level rises when a user participates in a reply chain they already appear in
 
+### Report types
+
+| Type | Description |
+|---|---|
+| **Student report** (default) | One row per enrolled user with per-student metrics |
+| **Group report** | One row per course group; metrics are summed across group members; also shows active/inactive member counts and number of distinct nationalities |
+| **Country report** | One row per country (based on user profile field); metrics are summed across all users from that country |
+
+Group and country reports are never used for grading.
+
 ### Filters
 
 - **Forums** — select one or more forums, or leave empty for all course forums
@@ -52,6 +62,7 @@ Three methods (selectable per report):
 - **Stale reply threshold** — number of days after which a reply is counted as stale (1–28)
 - **International engagement only** — when checked, only counts replies between users from different countries
 - **Database module activity** — include entry and comment counts from selected Database instances
+- **Hidden columns** (student reports only) — multi-select to suppress specific columns from the results table and CSV; defaults hide less-commonly-needed columns (group, country, institution, word count, multimedia breakdown, engagement levels 1–4, first/last post dates)
 
 ### Automated grading (editing teacher / manager only)
 

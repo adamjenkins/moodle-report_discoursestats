@@ -55,5 +55,60 @@ function xmldb_report_discoursestats_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026062902, 'report', 'discoursestats');
     }
 
+    if ($oldversion < 2026063002) {
+        $table = new xmldb_table('discoursestats_schedules');
+
+        $field = new xmldb_field('reporttype', XMLDB_TYPE_INTEGER, '2', null, false, false, '1', 'gradingtriggered');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('hiddencolumns', XMLDB_TYPE_TEXT, null, null, false, false, null, 'reporttype');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $aggtable = new xmldb_table('discoursestats_aggregate_results');
+        if (!$dbman->table_exists($aggtable)) {
+            $aggtable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+            $aggtable->add_field('schedule', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+            $aggtable->add_field('reporttype', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '2');
+            $aggtable->add_field('rowid', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('rowname', XMLDB_TYPE_CHAR, '255', null, false);
+            $aggtable->add_field('activemembers', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('inactivemembers', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('nationalities', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('posts', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('replies', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('stalereply', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('selfreply', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('repliestoseed', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('uniquedaysactive', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('views', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('uniquedaysviewed', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('wordcount', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('multimedia', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('images', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('videos', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('audios', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('links', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('dbentries', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('dbcomments', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('engagement1', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('engagement2', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('engagement3', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('engagement4', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('averageengagement', XMLDB_TYPE_FLOAT, null, null, false);
+            $aggtable->add_field('maximumengagement', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('reactionsgiven', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_field('reactionsreceived', XMLDB_TYPE_INTEGER, '10', null, false);
+            $aggtable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $aggtable->add_index('schedule_idx', XMLDB_INDEX_NOTUNIQUE, ['schedule']);
+            $dbman->create_table($aggtable);
+        }
+
+        upgrade_plugin_savepoint(true, 2026063002, 'report', 'discoursestats');
+    }
+
     return true;
 }
