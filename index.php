@@ -29,8 +29,9 @@ require_once(__DIR__ . '/classes/forms/report_form.php');
 use report_discoursestats\forms\report_form;
 use report_discoursestats\forms\grading_form;
 
-$courseid = required_param('id', PARAM_INT);
-$course   = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+$courseid     = required_param('id', PARAM_INT);
+$copygrading  = optional_param('copygrading', 0, PARAM_INT);
+$course       = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 
 require_login($course);
 
@@ -71,6 +72,37 @@ if ($haspushgrades) {
     require_once(__DIR__ . '/classes/forms/grading_form.php');
     $gradingform = new grading_form($courseid);
 
+    // Pre-populate form when copying an existing grading schedule.
+    if ($copygrading) {
+        $copyrec = $DB->get_record_select(
+            'discoursestats_schedules',
+            'id = :id AND course = :course AND gradingname IS NOT NULL AND gradingname != :empty',
+            ['id' => $copygrading, 'course' => $courseid, 'empty' => '']
+        );
+        if ($copyrec) {
+            $copydefaults = new \stdClass();
+            $copydefaults->gradingname            = $copyrec->gradingname;
+            $copydefaults->gradingformula         = $copyrec->gradingformula;
+            $copydefaults->gradingfeedback        = $copyrec->gradingfeedback;
+            $copydefaults->gradingmax             = $copyrec->gradingmax;
+            $copydefaults->gradingcategory        = $copyrec->gradingcategory;
+            $copydefaults->gradinghidden          = $copyrec->gradinghidden;
+            $copydefaults->engagementmethod       = $copyrec->engagementmethod;
+            $copydefaults->engagementinternational = $copyrec->engagementinternational;
+            $copydefaults->stalethreshold         = $copyrec->stalethreshold;
+            $copydefaults->country                = $copyrec->country ?? '0';
+            $copydefaults->group                  = $copyrec->groupid ?? 0;
+            $copydefaults->starttime              = $copyrec->starttime;
+            $copydefaults->endtime                = $copyrec->endtime;
+            $copydefaults->forums                 = !empty($copyrec->forums) ? json_decode($copyrec->forums, true) : [];
+            if ($copyrec->dbinstances !== null) {
+                $copydefaults->includedbinstances = 1;
+                $copydefaults->dbinstances        = json_decode($copyrec->dbinstances, true) ?: [];
+            }
+            $gradingform->set_data($copydefaults);
+        }
+    }
+
     if ($gradingformdata = $gradingform->get_data()) {
         discoursestats_addschedule($gradingformdata, $coursecontext);
         redirect(
@@ -100,7 +132,7 @@ echo $OUTPUT->render_from_template(
 // Automated grading sections — capability-gated.
 if ($haspushgrades && $gradingform) {
     // Show "Automated Grading" section with collapsible "Add grading schedule" form.
-    $gradingformopen = $gradingform->is_submitted() && !$gradingform->get_data();
+    $gradingformopen = !empty($copygrading) || ($gradingform->is_submitted() && !$gradingform->get_data());
     $collapseshow    = $gradingformopen ? ' show' : '';
     $ariaexpanded    = $gradingformopen ? 'true' : 'false';
 

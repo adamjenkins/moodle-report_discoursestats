@@ -284,6 +284,10 @@ function discoursestats_getgradingschedulescontext(int $courseid): array {
             'statusClass'      => $status[1],
             'gradingtriggered' => !empty($record->gradingtriggered),
             'viewurl'          => (new \moodle_url('/report/discoursestats/view.php', ['id' => $record->id]))->out(false),
+            'copyurl'          => (new \moodle_url(
+                '/report/discoursestats/index.php',
+                ['id' => $courseid, 'copygrading' => $record->id]
+            ))->out(false),
             'deleteurl'        => (new \moodle_url(
                 '/report/discoursestats/view.php',
                 ['id' => $record->id, 'action' => 'delete']
@@ -862,15 +866,20 @@ function discoursestats_executeschedule(\stdClass $schedule): bool {
         $schedule->processedtime = time();
         $DB->update_record('discoursestats_schedules', $schedule);
 
-        // Remove older finished schedules for the same user (keep only the latest).
+        // Remove older finished non-grading schedules for the same user (keep only the latest).
+        // Grading schedules (gradingname IS NOT NULL) are never auto-purged; they persist until deleted.
         $DB->execute(
             "DELETE FROM {discoursestats_results} WHERE schedule IN (
-                SELECT id FROM {discoursestats_schedules} WHERE userid = ? AND createdtime < ?
+                SELECT id FROM {discoursestats_schedules}
+                WHERE userid = ? AND createdtime < ?
+                  AND (gradingname IS NULL OR gradingname = '')
             )",
             [$schedule->userid, $schedule->createdtime]
         );
         $DB->execute(
-            "DELETE FROM {discoursestats_schedules} WHERE userid = ? AND createdtime < ?",
+            "DELETE FROM {discoursestats_schedules}
+             WHERE userid = ? AND createdtime < ?
+               AND (gradingname IS NULL OR gradingname = '')",
             [$schedule->userid, $schedule->createdtime]
         );
 
@@ -1485,14 +1494,23 @@ function discoursestats_mathparse_primary(string $expr, int &$pos): float {
  * @return string
  */
 function discoursestats_apply_feedback_template(string $template, \stdClass $result): string {
+    $numericfields = array_flip(discoursestats_formula_fields());
     foreach (get_object_vars($result) as $key => $val) {
-        $template = str_replace('{' . $key . '}', (string)($val ?? ''), $template);
+        $substitute = ($val === null && isset($numericfields[$key])) ? '0' : (string)($val ?? '');
+        $template   = str_replace('{' . $key . '}', $substitute, $template);
     }
     return $template;
 }
 
 /**
  * Calculate grades and push them to the Moodle gradebook.
+ *
+ * Uses grade_item::update_final_grade() directly rather than grade_update(), because
+ * grade_update() routes through update_raw_grade() which calls adjust_raw_grade(), and
+ * adjust_raw_grade() calls component_callback_exists('mod_discoursestats', ...) — but
+ * discoursestats is a report, not an activity module, so that callback lookup throws a
+ * coding_exception.  update_final_grade() sets the final grade directly and avoids the
+ * module callback path entirely.
  *
  * @param int $scheduleid
  */
@@ -1503,19 +1521,65 @@ function discoursestats_push_grades(int $scheduleid) {
     $schedule = $DB->get_record('discoursestats_schedules', ['id' => $scheduleid], '*', MUST_EXIST);
     $results  = $DB->get_records('discoursestats_results', ['schedule' => $scheduleid]);
 
-    $grades = [];
-    $log    = [];
+    // Find or create the grade item for this schedule.
+    // itemtype='manual' (not 'mod') so grade_item::get_context() uses the course context
+    // and does not try to look up a non-existent mdl_discoursestats module table.
+    // The idnumber 'discoursestats_N' uniquely identifies the schedule's grade item.
+    $idnumber = 'discoursestats_' . $scheduleid;
+    $existingitems = grade_item::fetch_all([
+        'courseid' => (int)$schedule->course,
+        'itemtype' => 'manual',
+        'idnumber' => $idnumber,
+    ]);
+    if ($existingitems && count($existingitems) === 1) {
+        $gradeitem = reset($existingitems);
+        $update = false;
+        if ($gradeitem->itemname !== $schedule->gradingname) {
+            $gradeitem->itemname = $schedule->gradingname;
+            $update = true;
+        }
+        if (grade_floats_different($gradeitem->grademax, (float)$schedule->gradingmax)) {
+            $gradeitem->grademax = (float)$schedule->gradingmax;
+            $update = true;
+        }
+        $wanthidden = !empty($schedule->gradinghidden) ? 1 : 0;
+        if ((int)$gradeitem->hidden !== $wanthidden) {
+            $gradeitem->hidden = $wanthidden;
+            $update = true;
+        }
+        if ($update) {
+            $gradeitem->update('report/discoursestats');
+        }
+    } else {
+        $gradeitem = new grade_item((object)[
+            'courseid'  => (int)$schedule->course,
+            'itemtype'  => 'manual',
+            'itemname'  => $schedule->gradingname,
+            'idnumber'  => $idnumber,
+            'gradetype' => GRADE_TYPE_VALUE,
+            'grademin'  => 0.0,
+            'grademax'  => (float)$schedule->gradingmax,
+            'hidden'    => !empty($schedule->gradinghidden) ? 1 : 0,
+        ]);
+        if (!empty($schedule->gradingcategory)) {
+            $gradeitem->categoryid = (int)$schedule->gradingcategory;
+        }
+        $gradeitem->insert('report/discoursestats');
+    }
+
+    $log = [];
     foreach ($results as $result) {
         $rawgrade = discoursestats_evaluate_formula($schedule->gradingformula ?? '', $result);
         $rawgrade = max(0.0, min((float)$schedule->gradingmax, $rawgrade));
         $feedback = discoursestats_apply_feedback_template($schedule->gradingfeedback ?? '', $result);
 
-        $grade                 = new \stdClass();
-        $grade->userid         = (int)$result->userid;
-        $grade->rawgrade       = $rawgrade;
-        $grade->feedback       = $feedback;
-        $grade->feedbackformat = FORMAT_PLAIN;
-        $grades[$result->userid] = $grade;
+        $gradeitem->update_final_grade(
+            (int)$result->userid,
+            $rawgrade,
+            'report/discoursestats',
+            $feedback,
+            FORMAT_PLAIN
+        );
 
         $log[] = [
             'scheduleid' => $scheduleid,
@@ -1526,31 +1590,6 @@ function discoursestats_push_grades(int $scheduleid) {
         ];
     }
 
-    $params = [
-        'itemname'   => $schedule->gradingname,
-        'gradetype'  => GRADE_TYPE_VALUE,
-        'grademax'   => (float)$schedule->gradingmax,
-    ];
-    if (!empty($schedule->gradingcategory)) {
-        $params['categoryid'] = (int)$schedule->gradingcategory;
-    }
-    if (!empty($schedule->gradinghidden)) {
-        $params['hidden'] = 1;
-    }
-
-    grade_update(
-        'report/discoursestats',
-        $schedule->course,
-        'report',
-        'discoursestats',
-        $scheduleid,
-        0,
-        $grades,
-        $params
-    );
-
-    // Write audit log.
-    foreach ($log as $entry) {
-        $DB->insert_record('discoursestats_grading_log', (object)$entry);
-    }
+    // Write audit log (after all grade_update calls to avoid partial logs on exception).
+    $DB->insert_records('discoursestats_grading_log', $log);
 }

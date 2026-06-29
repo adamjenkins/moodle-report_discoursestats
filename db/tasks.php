@@ -28,7 +28,7 @@ $tasks = [
     [
         'classname' => 'report_discoursestats\\task\\schedule_task',
         'blocking'  => 0,
-        'minute'    => '0',
+        'minute'    => '*/5',
         'hour'      => '*',
         'day'       => '*',
         'month'     => '*',

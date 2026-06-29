@@ -29,6 +29,7 @@ $string['allmygroups'] = 'All of my groups';
 $string['audios'] = 'Audios';
 $string['automatedgrades'] = 'Automatically generated grades';
 $string['completereport'] = 'Complete Report';
+$string['copy'] = 'Copy';
 $string['createdby'] = 'Created by';
 $string['dbcomments'] = 'Database comments';
 $string['dbentries'] = 'Database entries';

@@ -43,14 +43,41 @@ class schedule_task extends \core\task\scheduled_task {
 
     /**
      * Runs all queued report schedules.
+     *
+     * Grading schedules whose end date has already passed are processed immediately on
+     * every task run, before the hour-based guard is checked.  Regular report schedules
+     * (and future-dated grading schedules) only run at the configured execution hours.
      */
     public function execute() {
         global $DB;
 
+        // Process grading schedules whose endtime has already passed.  These are run
+        // regardless of the configured execution-hour guard so that grades are pushed as
+        // soon as the 5-minute cron fires after the end date.
+        $overduegradings = $DB->get_records_select(
+            'discoursestats_schedules',
+            'status = :status
+             AND gradingname IS NOT NULL AND gradingname != :empty
+             AND endtime IS NOT NULL AND endtime < :now',
+            [
+                'status' => DISCOURSESTATS_STATUS_SCHEDULED,
+                'empty'  => '',
+                'now'    => time(),
+            ]
+        );
+        foreach ($overduegradings as $schedule) {
+            mtrace('Executing overdue grading schedule ID: ' . $schedule->id);
+            $success = discoursestats_executeschedule($schedule);
+            mtrace($success ? 'Success' : 'Failed');
+        }
+
+        // Regular report schedules only run at the configured execution hours.
         if (discoursestats_getnextscheduledtime() > time()) {
             return;
         }
 
+        // Fetch remaining SCHEDULED records (overdue grading schedules are already
+        // FINISH/ERROR at this point, so they will not appear here).
         $schedules = $DB->get_records(
             'discoursestats_schedules',
             ['status' => DISCOURSESTATS_STATUS_SCHEDULED]

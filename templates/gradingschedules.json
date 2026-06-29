@@ -10,6 +10,7 @@
             "statusClass": "text-success",
             "gradingtriggered": true,
             "viewurl": "/report/discoursestats/view.php?id=5",
+            "copyurl": "/report/discoursestats/index.php?id=2&copygrading=5",
             "deleteurl": "/report/discoursestats/view.php?id=5&action=delete"
         },
         {
@@ -21,6 +22,7 @@
             "statusClass": "",
             "gradingtriggered": false,
             "viewurl": "/report/discoursestats/view.php?id=6",
+            "copyurl": "/report/discoursestats/index.php?id=2&copygrading=6",
             "deleteurl": "/report/discoursestats/view.php?id=6&action=delete"
         }
     ]

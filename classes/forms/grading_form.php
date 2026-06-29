@@ -49,7 +49,7 @@ class grading_form extends \moodleform {
     public function __construct(int $courseid) {
         $this->courseid      = $courseid;
         $this->coursecontext = \core\context\course::instance($courseid);
-        parent::__construct();
+        parent::__construct(new \moodle_url('/report/discoursestats/index.php', ['id' => $courseid]));
     }
 
     /**

@@ -52,7 +52,7 @@ class report_form extends \moodleform {
         $this->courseid      = $courseid;
         $this->coursecontext = \core\context\course::instance($courseid);
         $this->expanded      = $expanded;
-        parent::__construct();
+        parent::__construct(new \moodle_url('/report/discoursestats/index.php', ['id' => $courseid]));
     }
 
     /**

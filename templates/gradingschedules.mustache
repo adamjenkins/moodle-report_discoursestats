@@ -20,6 +20,7 @@
       - statusClass        - Bootstrap CSS class for status
       - gradingtriggered   - boolean, true when grades have been pushed
       - viewurl            - URL to view the report results
+      - copyurl            - URL to copy this grading schedule (pre-fills the form)
       - deleteurl          - URL to delete the grading schedule
 
     Example context (json):
@@ -35,6 +36,7 @@
                 "statusClass": "text-success",
                 "gradingtriggered": true,
                 "viewurl": "/report/discoursestats/view.php?id=5",
+                "copyurl": "/report/discoursestats/index.php?id=2&copygrading=5",
                 "deleteurl": "/report/discoursestats/view.php?id=5&action=delete"
             }
         ]
@@ -63,6 +65,8 @@
             <td class="{{statusClass}}">{{status}}</td>
             <td>
                 <a href="{{viewurl}}">{{#str}} view, report_discoursestats {{/str}}</a>
+                &nbsp;|&nbsp;
+                <a href="{{copyurl}}">{{#str}} copy, report_discoursestats {{/str}}</a>
                 &nbsp;|&nbsp;
                 <a href="{{deleteurl}}">{{#str}} delete, report_discoursestats {{/str}}</a>
             </td>
