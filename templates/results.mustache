@@ -1,0 +1,70 @@
+{{!
+    @template report_discoursestats/results
+
+    Template to display the data table of report results.
+
+    Context variables required for this template:
+    * headers - array of header objects:
+      - name    - column label
+      - sorturl - URL to sort by this column
+      - icon    - Font Awesome icon class (null if not sorted by this column)
+    * rows - array of row objects:
+      - records   - ordered array of cell values
+      - reporturl - URL to the user's outline report
+    * empty - boolean, true when there are no results
+
+    Example context (json):
+    {
+        "headers": [
+            {"name": "Username", "sorturl": "/report/discoursestats/view.php?id=1&sn=username&sd=asc", "icon": null},
+            {"name": "First name", "sorturl": "/report/discoursestats/view.php?id=1&sn=firstname&sd=asc", "icon": "fa-caret-up"}
+        ],
+        "rows": [
+            {
+                "records": ["student1", "Alice", "Smith", "Group A", "Japan", "Uni A", 2, 5, 1, 0, 3, 10, 8, 1200, 3, 1, 0, 2, 0, 0, 5, 2, 1, 1, 0, 0, 2.5, 3, "1 Jan 2026", "15 Jan 2026", 0, 0],
+                "reporturl": "/report/outline/user.php?id=5&course=2&mode=complete"
+            }
+        ],
+        "empty": false
+    }
+}}
+<hr>
+<div style="width: 100%; overflow-x: auto;">
+    {{#empty}}
+    <div class="alert alert-warning">
+        {{#str}} emptyresults, report_discoursestats {{/str}}
+    </div>
+    {{/empty}}
+    {{^empty}}
+    <a id="results"></a>
+    <table class="table table-sm table-bordered table-hover">
+        <thead>
+            <tr>
+                {{#headers}}
+                <th>
+                    <a href="{{{sorturl}}}" class="text-primary">
+                        {{name}}
+                        {{#icon}}<i class="fa {{icon}}"></i>{{/icon}}
+                    </a>
+                </th>
+                {{/headers}}
+                <th>{{#str}} completereport, report_discoursestats {{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#rows}}
+            <tr>
+                {{#records}}
+                <td>{{.}}</td>
+                {{/records}}
+                <td>
+                    <a href="{{{reporturl}}}" target="_blank">
+                        {{#str}} view, report_discoursestats {{/str}}
+                    </a>
+                </td>
+            </tr>
+            {{/rows}}
+        </tbody>
+    </table>
+    {{/empty}}
+</div>

@@ -1,0 +1,20 @@
+{
+    "createdby": "Admin User",
+    "requestedtime": "Monday, 1 January 2026, 10:00 AM",
+    "scheduledtime": "Monday, 1 January 2026, 11:00 AM",
+    "status": "Finished",
+    "statusclass": "text-success",
+    "message": "",
+    "forums": "General Discussion, Weekly Forum",
+    "stalethreshold": 7,
+    "dbinstances": "Student Database",
+    "country": "All",
+    "group": "All",
+    "starttime": "1 December 2025, 12:00 AM",
+    "endtime": "31 December 2025, 11:59 PM",
+    "engagementmethod": "Person-to-Person Engagement",
+    "engagementinternational": "No",
+    "gradingname": "Forum Participation Grade",
+    "downloadurl": "/report/discoursestats/view.php?id=1&action=download",
+    "deleteurl": "/report/discoursestats/view.php?id=1&action=delete"
+}

@@ -1,0 +1,27 @@
+{
+    "hasgradingschedules": true,
+    "gradingschedules": [
+        {
+            "gradingname": "Week 3 Discussion Grade",
+            "gradingformula": "min(replies * 2 + posts * 5, 100)",
+            "starttime": "1 Jun 2026, 00:00",
+            "endtime": "15 Jun 2026, 00:00",
+            "status": "Finished",
+            "statusClass": "text-success",
+            "gradingtriggered": true,
+            "viewurl": "/report/discoursestats/view.php?id=5",
+            "deleteurl": "/report/discoursestats/view.php?id=5&action=delete"
+        },
+        {
+            "gradingname": "Final Discussion Grade",
+            "gradingformula": "min(posts * 3 + averageengagement * 10, 100)",
+            "starttime": "1 Jun 2026, 00:00",
+            "endtime": "30 Jun 2026, 00:00",
+            "status": "Scheduled",
+            "statusClass": "",
+            "gradingtriggered": false,
+            "viewurl": "/report/discoursestats/view.php?id=6",
+            "deleteurl": "/report/discoursestats/view.php?id=6&action=delete"
+        }
+    ]
+}

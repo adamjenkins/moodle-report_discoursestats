@@ -1,0 +1,81 @@
+{{!
+    @template report_discoursestats/myreports
+
+    Template to display the list of a user's report schedules.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * none
+
+    Context variables required for this template:
+    * hasreports  - boolean, true when the user has at least one schedule
+    * reports     - array of report objects with keys:
+      - requestedtime  - human-readable requested time
+      - scheduledtime  - human-readable scheduled/processed time
+      - status         - status label string
+      - statusClass    - Bootstrap CSS class for status
+      - viewurl        - URL to view the report
+      - downloadurl    - URL to download CSV (empty/null if not finished)
+      - deleteurl      - URL to delete the report
+
+    Example context (json):
+    {
+        "hasreports": true,
+        "reports": [
+            {
+                "requestedtime": "Monday, 1 January 2026, 10:00 AM",
+                "scheduledtime": "Monday, 1 January 2026, 11:00 AM",
+                "status": "Finished",
+                "statusClass": "text-success",
+                "viewurl": "/report/discoursestats/view.php?id=1",
+                "downloadurl": "/report/discoursestats/view.php?id=1&action=download",
+                "deleteurl": "/report/discoursestats/view.php?id=1&action=delete"
+            },
+            {
+                "requestedtime": "Tuesday, 2 January 2026, 09:00 AM",
+                "scheduledtime": "Tuesday, 2 January 2026, 10:00 AM",
+                "status": "Scheduled",
+                "statusClass": "",
+                "viewurl": "/report/discoursestats/view.php?id=2",
+                "downloadurl": "",
+                "deleteurl": "/report/discoursestats/view.php?id=2&action=delete"
+            }
+        ]
+    }
+}}
+<h2>{{#str}} myrequestedreports, report_discoursestats {{/str}}</h2>
+{{#hasreports}}
+<table class="table table-sm table-bordered table-hover generaltable">
+    <thead>
+        <tr>
+            <th>{{#str}} requestedtime, report_discoursestats {{/str}}</th>
+            <th>{{#str}} scheduledtime, report_discoursestats {{/str}}</th>
+            <th>{{#str}} status, report_discoursestats {{/str}}</th>
+            <th>{{#str}} actions, report_discoursestats {{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#reports}}
+        <tr>
+            <td>{{requestedtime}}</td>
+            <td>{{scheduledtime}}</td>
+            <td class="{{statusClass}}">{{status}}</td>
+            <td>
+                <a href="{{{viewurl}}}">{{#str}} view, report_discoursestats {{/str}}</a>
+                {{#downloadurl}}
+                &nbsp;|&nbsp;
+                <a href="{{{downloadurl}}}">{{#str}} download {{/str}}</a>
+                {{/downloadurl}}
+                &nbsp;|&nbsp;
+                <a href="{{{deleteurl}}}">{{#str}} delete, report_discoursestats {{/str}}</a>
+            </td>
+        </tr>
+        {{/reports}}
+    </tbody>
+</table>
+{{/hasreports}}
+{{^hasreports}}
+<p class="text-muted">{{#str}} nodata, report_discoursestats {{/str}}</p>
+{{/hasreports}}

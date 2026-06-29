@@ -1,0 +1,123 @@
+name: Moodle Plugin CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 3
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Moodle 5.0: PHP 8.1, 8.2, 8.3 (PHP 8.4 is NOT supported by Moodle 5.0)
+          - php: '8.1'
+            moodle-branch: 'MOODLE_500_STABLE'
+            db: pgsql
+          - php: '8.2'
+            moodle-branch: 'MOODLE_500_STABLE'
+            db: pgsql
+          - php: '8.3'
+            moodle-branch: 'MOODLE_500_STABLE'
+            db: pgsql
+          # Moodle 5.1: PHP 8.2, 8.3, 8.4
+          - php: '8.2'
+            moodle-branch: 'MOODLE_501_STABLE'
+            db: pgsql
+          - php: '8.3'
+            moodle-branch: 'MOODLE_501_STABLE'
+            db: pgsql
+          - php: '8.4'
+            moodle-branch: 'MOODLE_501_STABLE'
+            db: pgsql
+          # Moodle 5.2: PHP 8.2, 8.3, 8.4
+          - php: '8.2'
+            moodle-branch: 'MOODLE_502_STABLE'
+            db: pgsql
+          - php: '8.3'
+            moodle-branch: 'MOODLE_502_STABLE'
+            db: pgsql
+          - php: '8.4'
+            moodle-branch: 'MOODLE_502_STABLE'
+            db: pgsql
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ${{ matrix.extensions }}
+          ini-values: max_input_vars=5000
+          coverage: none
+
+      - name: Initialise moodle-plugin-ci
+        run: |
+          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4
+          echo $(cd ci && pwd)/bin >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/ci/vendor/bin" >> $GITHUB_PATH
+          sudo locale-gen en_AU.UTF-8
+        env:
+          COMPOSER_ALLOW_SUPERUSER: 1
+
+      - name: Install Moodle (${{ matrix.moodle-branch }})
+        run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
+        env:
+          DB:           ${{ matrix.db }}
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
+
+      - name: PHP Lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phplint
+
+      - name: PHP Copy/Paste Detector
+        continue-on-error: true
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcpd
+
+      - name: PHP Mess Detector
+        continue-on-error: true
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpmd
+
+      - name: Moodle Code Checker (phpcs)
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcs --max-warnings 0
+
+      - name: Moodle PHPDoc Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpdoc --max-warnings 0
+
+      - name: Validating
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci validate
+
+      - name: Check upgrade savepoints
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci savepoints
+
+      - name: Mustache Lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci mustachelint
+
+      - name: PHP Unit tests
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit --fail-on-warning
+
+      - name: Behat features
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci behat --profile chrome

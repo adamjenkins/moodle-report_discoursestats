@@ -1,0 +1,43 @@
+{
+    "headers": [
+        {"name": "Username", "sorturl": "/report/discoursestats/view.php?id=1&sn=username&sd=asc#results", "icon": null},
+        {"name": "First name", "sorturl": "/report/discoursestats/view.php?id=1&sn=firstname&sd=asc#results", "icon": "fa-caret-up"},
+        {"name": "Last name", "sorturl": "/report/discoursestats/view.php?id=1&sn=lastname&sd=asc#results", "icon": null},
+        {"name": "Group", "sorturl": "/report/discoursestats/view.php?id=1&sn=groups&sd=asc#results", "icon": null},
+        {"name": "Country", "sorturl": "/report/discoursestats/view.php?id=1&sn=country&sd=asc#results", "icon": null},
+        {"name": "Institution", "sorturl": "/report/discoursestats/view.php?id=1&sn=institution&sd=asc#results", "icon": null},
+        {"name": "Posts", "sorturl": "/report/discoursestats/view.php?id=1&sn=posts&sd=asc#results", "icon": null},
+        {"name": "Replies", "sorturl": "/report/discoursestats/view.php?id=1&sn=replies&sd=asc#results", "icon": null},
+        {"name": "Stale replies", "sorturl": "/report/discoursestats/view.php?id=1&sn=stalereply&sd=asc#results", "icon": null},
+        {"name": "Self-replies", "sorturl": "/report/discoursestats/view.php?id=1&sn=selfreply&sd=asc#results", "icon": null},
+        {"name": "Direct replies to original post", "sorturl": "/report/discoursestats/view.php?id=1&sn=repliestoseed&sd=asc#results", "icon": null},
+        {"name": "Unique days active", "sorturl": "/report/discoursestats/view.php?id=1&sn=uniquedaysactive&sd=asc#results", "icon": null},
+        {"name": "Views", "sorturl": "/report/discoursestats/view.php?id=1&sn=views&sd=asc#results", "icon": null},
+        {"name": "Unique days viewed", "sorturl": "/report/discoursestats/view.php?id=1&sn=uniquedaysviewed&sd=asc#results", "icon": null},
+        {"name": "Word count", "sorturl": "/report/discoursestats/view.php?id=1&sn=wordcount&sd=asc#results", "icon": null},
+        {"name": "Multimedia", "sorturl": "/report/discoursestats/view.php?id=1&sn=multimedia&sd=asc#results", "icon": null},
+        {"name": "Images", "sorturl": "/report/discoursestats/view.php?id=1&sn=images&sd=asc#results", "icon": null},
+        {"name": "Videos", "sorturl": "/report/discoursestats/view.php?id=1&sn=videos&sd=asc#results", "icon": null},
+        {"name": "Audios", "sorturl": "/report/discoursestats/view.php?id=1&sn=audios&sd=asc#results", "icon": null},
+        {"name": "Links", "sorturl": "/report/discoursestats/view.php?id=1&sn=links&sd=asc#results", "icon": null},
+        {"name": "Database entries", "sorturl": "/report/discoursestats/view.php?id=1&sn=dbentries&sd=asc#results", "icon": null},
+        {"name": "Database comments", "sorturl": "/report/discoursestats/view.php?id=1&sn=dbcomments&sd=asc#results", "icon": null},
+        {"name": "1st Engagement", "sorturl": "/report/discoursestats/view.php?id=1&sn=engagement1&sd=asc#results", "icon": null},
+        {"name": "2nd Engagement", "sorturl": "/report/discoursestats/view.php?id=1&sn=engagement2&sd=asc#results", "icon": null},
+        {"name": "3rd Engagement", "sorturl": "/report/discoursestats/view.php?id=1&sn=engagement3&sd=asc#results", "icon": null},
+        {"name": "4th+ Engagement", "sorturl": "/report/discoursestats/view.php?id=1&sn=engagement4&sd=asc#results", "icon": null},
+        {"name": "Average Engagement Level", "sorturl": "/report/discoursestats/view.php?id=1&sn=averageengagement&sd=asc#results", "icon": null},
+        {"name": "Maximum Engagement Level", "sorturl": "/report/discoursestats/view.php?id=1&sn=maximumengagement&sd=asc#results", "icon": null},
+        {"name": "First Post", "sorturl": "/report/discoursestats/view.php?id=1&sn=firstpost&sd=asc#results", "icon": null},
+        {"name": "Last Post", "sorturl": "/report/discoursestats/view.php?id=1&sn=lastpost&sd=asc#results", "icon": null},
+        {"name": "Reactions Given", "sorturl": "/report/discoursestats/view.php?id=1&sn=reactionsgiven&sd=asc#results", "icon": null},
+        {"name": "Reactions Received", "sorturl": "/report/discoursestats/view.php?id=1&sn=reactionsreceived&sd=asc#results", "icon": null}
+    ],
+    "rows": [
+        {
+            "records": ["student1", "Alice", "Smith", "Group A", "Japan", "University A", 2, 5, 1, 0, 3, 10, 8, 5, 1200, 3, 1, 0, 2, 0, 4, 2, 1, 1, 0, 0, 2.5, 3, "1 Jan 2026, 09:00", "15 Jan 2026, 14:30", 0, 0],
+            "reporturl": "/report/outline/user.php?id=5&course=2&mode=complete"
+        }
+    ],
+    "empty": false
+}

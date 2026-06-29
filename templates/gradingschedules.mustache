@@ -1,0 +1,76 @@
+{{!
+    @template report_discoursestats/gradingschedules
+
+    Template to display automatically configured grading schedules for a course.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * none
+
+    Context variables required for this template:
+    * hasgradingschedules  - boolean, true when at least one grading schedule exists
+    * gradingschedules     - array of grading schedule objects with keys:
+      - gradingname        - grade item name
+      - gradingformula     - formula string
+      - starttime          - human-readable report start date
+      - endtime            - human-readable report end date
+      - status             - status label string
+      - statusClass        - Bootstrap CSS class for status
+      - gradingtriggered   - boolean, true when grades have been pushed
+      - viewurl            - URL to view the report results
+      - deleteurl          - URL to delete the grading schedule
+
+    Example context (json):
+    {
+        "hasgradingschedules": true,
+        "gradingschedules": [
+            {
+                "gradingname": "Week 3 Discussion Grade",
+                "gradingformula": "min(replies * 2 + posts * 5, 100)",
+                "starttime": "1 Jun 2026, 00:00",
+                "endtime": "15 Jun 2026, 00:00",
+                "status": "Finished",
+                "statusClass": "text-success",
+                "gradingtriggered": true,
+                "viewurl": "/report/discoursestats/view.php?id=5",
+                "deleteurl": "/report/discoursestats/view.php?id=5&action=delete"
+            }
+        ]
+    }
+}}
+<h3>{{#str}} automatedgrades, report_discoursestats {{/str}}</h3>
+{{#hasgradingschedules}}
+<table class="table table-sm table-bordered table-hover generaltable">
+    <thead>
+        <tr>
+            <th>{{#str}} gradingname, report_discoursestats {{/str}}</th>
+            <th>{{#str}} gradingformula, report_discoursestats {{/str}}</th>
+            <th>{{#str}} reportstart, report_discoursestats {{/str}}</th>
+            <th>{{#str}} reportend, report_discoursestats {{/str}}</th>
+            <th>{{#str}} status, report_discoursestats {{/str}}</th>
+            <th>{{#str}} actions, report_discoursestats {{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#gradingschedules}}
+        <tr>
+            <td>{{gradingname}}</td>
+            <td><code>{{gradingformula}}</code></td>
+            <td>{{starttime}}</td>
+            <td>{{endtime}}</td>
+            <td class="{{statusClass}}">{{status}}</td>
+            <td>
+                <a href="{{viewurl}}">{{#str}} view, report_discoursestats {{/str}}</a>
+                &nbsp;|&nbsp;
+                <a href="{{deleteurl}}">{{#str}} delete, report_discoursestats {{/str}}</a>
+            </td>
+        </tr>
+        {{/gradingschedules}}
+    </tbody>
+</table>
+{{/hasgradingschedules}}
+{{^hasgradingschedules}}
+<p class="text-muted">{{#str}} nodata, report_discoursestats {{/str}}</p>
+{{/hasgradingschedules}}

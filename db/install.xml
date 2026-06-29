@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="report/discoursestats/db" VERSION="2026062900" COMMENT="XMLDB file for Discourse Stats Report"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+    <TABLES>
+        <TABLE NAME="discoursestats_schedules" COMMENT="Discourse Stats Report Schedules">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+                <FIELD NAME="createdtime" TYPE="int" LENGTH="10" NOTNULL="true"/>
+                <FIELD NAME="processedtime" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="status" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0"/>
+                <FIELD NAME="message" TYPE="text" NOTNULL="false"/>
+                <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+                <FIELD NAME="forums" TYPE="text" NOTNULL="false" COMMENT="JSON array of forum IDs; null means all forums in course"/>
+                <FIELD NAME="stalethreshold" TYPE="int" LENGTH="4" NOTNULL="false" DEFAULT="7" COMMENT="Days after which a reply is considered stale"/>
+                <FIELD NAME="dbinstances" TYPE="text" NOTNULL="false" COMMENT="JSON array of database module IDs; null means none"/>
+                <FIELD NAME="country" TYPE="char" LENGTH="2" NOTNULL="false"/>
+                <FIELD NAME="groupid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="starttime" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="endtime" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagementmethod" TYPE="int" LENGTH="2" NOTNULL="false"/>
+                <FIELD NAME="engagementinternational" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0"/>
+                <FIELD NAME="gradingname" TYPE="char" LENGTH="255" NOTNULL="false" COMMENT="Grade item name; null if not a grading schedule"/>
+                <FIELD NAME="gradingformula" TYPE="text" NOTNULL="false" COMMENT="Formula e.g. min(replies * 0.5, 100)"/>
+                <FIELD NAME="gradingfeedback" TYPE="text" NOTNULL="false" COMMENT="Template with {fieldname} placeholders"/>
+                <FIELD NAME="gradingmax" TYPE="float" NOTNULL="false" DEFAULT="100"/>
+                <FIELD NAME="gradingcategory" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" COMMENT="Grade category ID; 0 means course top category"/>
+                <FIELD NAME="gradinghidden" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" COMMENT="Whether the grade item is hidden in the gradebook"/>
+                <FIELD NAME="gradingtriggered" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" COMMENT="Whether the adhoc grading task has been queued"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+            </KEYS>
+            <INDEXES>
+                <INDEX NAME="status_idx" UNIQUE="false" FIELDS="status"/>
+                <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid"/>
+                <INDEX NAME="course_idx" UNIQUE="false" FIELDS="course"/>
+            </INDEXES>
+        </TABLE>
+        <TABLE NAME="discoursestats_results" COMMENT="Discourse Stats Report Results">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="schedule" TYPE="int" LENGTH="10" NOTNULL="true"/>
+                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="username" TYPE="char" LENGTH="255" NOTNULL="false"/>
+                <FIELD NAME="firstname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+                <FIELD NAME="lastname" TYPE="char" LENGTH="255" NOTNULL="false"/>
+                <FIELD NAME="groups" TYPE="char" LENGTH="255" NOTNULL="false"/>
+                <FIELD NAME="country" TYPE="char" LENGTH="2" NOTNULL="false"/>
+                <FIELD NAME="institution" TYPE="char" LENGTH="255" NOTNULL="false"/>
+                <FIELD NAME="posts" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="replies" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="stalereply" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="selfreply" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="repliestoseed" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="uniquedaysactive" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="views" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="uniquedaysviewed" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="wordcount" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="multimedia" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="images" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="videos" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="audios" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="links" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="dbentries" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="dbcomments" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement1" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement2" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement3" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="engagement4" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="averageengagement" TYPE="float" NOTNULL="false"/>
+                <FIELD NAME="maximumengagement" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="firstpost" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="lastpost" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="reactionsgiven" TYPE="int" LENGTH="10" NOTNULL="false"/>
+                <FIELD NAME="reactionsreceived" TYPE="int" LENGTH="10" NOTNULL="false"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+            </KEYS>
+            <INDEXES>
+                <INDEX NAME="schedule_idx" UNIQUE="false" FIELDS="schedule"/>
+                <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid"/>
+            </INDEXES>
+        </TABLE>
+        <TABLE NAME="discoursestats_grading_log" COMMENT="Discourse Stats Grading Audit Log">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+                <FIELD NAME="scheduleid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+                <FIELD NAME="rawgrade" TYPE="float" NOTNULL="false"/>
+                <FIELD NAME="feedback" TYPE="text" NOTNULL="false"/>
+                <FIELD NAME="timepushed" TYPE="int" LENGTH="10" NOTNULL="true"/>
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+            </KEYS>
+            <INDEXES>
+                <INDEX NAME="scheduleid_idx" UNIQUE="false" FIELDS="scheduleid"/>
+                <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid"/>
+            </INDEXES>
+        </TABLE>
+    </TABLES>
+</XMLDB>

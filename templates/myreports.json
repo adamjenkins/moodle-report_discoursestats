@@ -1,0 +1,23 @@
+{
+    "hasreports": true,
+    "reports": [
+        {
+            "requestedtime": "Monday, 1 January 2026, 10:00 AM",
+            "scheduledtime": "Monday, 1 January 2026, 11:00 AM",
+            "status": "Finished",
+            "statusClass": "text-success",
+            "viewurl": "/report/discoursestats/view.php?id=1",
+            "downloadurl": "/report/discoursestats/view.php?id=1&action=download",
+            "deleteurl": "/report/discoursestats/view.php?id=1&action=delete"
+        },
+        {
+            "requestedtime": "Tuesday, 2 January 2026, 09:00 AM",
+            "scheduledtime": "Tuesday, 2 January 2026, 10:00 AM",
+            "status": "Scheduled",
+            "statusClass": "",
+            "viewurl": "/report/discoursestats/view.php?id=2",
+            "downloadurl": "",
+            "deleteurl": "/report/discoursestats/view.php?id=2&action=delete"
+        }
+    ]
+}

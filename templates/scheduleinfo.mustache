@@ -1,0 +1,112 @@
+{{!
+    @template report_discoursestats/scheduleinfo
+
+    Template to display the details of a single report schedule.
+
+    Context variables required for this template:
+    * createdby            - Full name of the user who created the schedule
+    * requestedtime        - Formatted time the report was requested
+    * scheduledtime        - Formatted time the report was/will be processed
+    * status               - Status label string
+    * statusclass          - Bootstrap CSS class for status colour
+    * message              - Error message (if any)
+    * forums               - Forum name(s) or "All"
+    * stalethreshold       - Number of days for stale reply threshold
+    * dbinstances          - Database module name(s) or "-"
+    * country              - Country name or "All"
+    * group                - Group name or "All"
+    * starttime            - Formatted start date or "-"
+    * endtime              - Formatted end date or "-"
+    * engagementmethod     - Engagement method label
+    * engagementinternational - "Yes" or "No"
+    * gradingname          - Grade item name (empty if no grading configured)
+    * downloadurl          - Download URL (falsy if not finished)
+    * deleteurl            - Delete URL
+
+    Example context (json):
+    {
+        "createdby": "Admin User",
+        "requestedtime": "Monday, 1 January 2026, 10:00 AM",
+        "scheduledtime": "Monday, 1 January 2026, 11:00 AM",
+        "status": "Finished",
+        "statusclass": "text-success",
+        "message": "",
+        "forums": "General Discussion, Weekly Forum",
+        "stalethreshold": 7,
+        "dbinstances": "Student Database",
+        "country": "All",
+        "group": "All",
+        "starttime": "1 December 2025, 12:00 AM",
+        "endtime": "31 December 2025, 11:59 PM",
+        "engagementmethod": "Person-to-Person Engagement",
+        "engagementinternational": "No",
+        "gradingname": "Forum Participation Grade",
+        "downloadurl": "/report/discoursestats/view.php?id=1&action=download",
+        "deleteurl": "/report/discoursestats/view.php?id=1&action=delete"
+    }
+}}
+<div class="card mb-3">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">{{#str}} createdby, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{createdby}}</dd>
+
+            <dt class="col-sm-3">{{#str}} requestedtime, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{requestedtime}}</dd>
+
+            <dt class="col-sm-3">{{#str}} scheduledtime, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{scheduledtime}}</dd>
+
+            <dt class="col-sm-3">{{#str}} status, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9 {{statusclass}}">{{status}}</dd>
+
+            {{#message}}
+            <dt class="col-sm-3">{{#str}} error {{/str}}</dt>
+            <dd class="col-sm-9 text-danger"><pre>{{message}}</pre></dd>
+            {{/message}}
+
+            <dt class="col-sm-3">{{#str}} forums, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{forums}}</dd>
+
+            <dt class="col-sm-3">{{#str}} stalethreshold, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{stalethreshold}}</dd>
+
+            <dt class="col-sm-3">{{#str}} dbinstances, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{dbinstances}}</dd>
+
+            <dt class="col-sm-3">{{#str}} country {{/str}}</dt>
+            <dd class="col-sm-9">{{country}}</dd>
+
+            <dt class="col-sm-3">{{#str}} group {{/str}}</dt>
+            <dd class="col-sm-9">{{group}}</dd>
+
+            <dt class="col-sm-3">{{#str}} reportstart, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{starttime}}</dd>
+
+            <dt class="col-sm-3">{{#str}} reportend, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{endtime}}</dd>
+
+            <dt class="col-sm-3">{{#str}} engagement_method, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{engagementmethod}}</dd>
+
+            <dt class="col-sm-3">{{#str}} engagement_international, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{engagementinternational}}</dd>
+
+            {{#gradingname}}
+            <dt class="col-sm-3">{{#str}} gradingname, report_discoursestats {{/str}}</dt>
+            <dd class="col-sm-9">{{gradingname}}</dd>
+            {{/gradingname}}
+        </dl>
+
+        <div class="mt-2">
+            {{#downloadurl}}
+            <a href="{{{downloadurl}}}" class="btn btn-primary mr-2">
+                {{#str}} download {{/str}}
+            </a>
+            {{/downloadurl}}
+            <a href="{{{deleteurl}}}" class="btn btn-danger">
+                {{#str}} delete, report_discoursestats {{/str}}
+            </a>
+        </div>
+    </div>
+</div>
