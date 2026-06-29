@@ -106,6 +106,16 @@ Reports are processed by a scheduled task (`\report_discoursestats\task\schedule
 
 Users with `getinstantreport` can bypass the queue and receive results immediately.
 
+## Course reset
+
+When a teacher resets a course and selects **Delete all posts** (the forum "All posts" option), all Discourse Stats schedules, results, aggregate results, and grading log entries for the course are automatically deleted. This is implemented via a `\core\event\course_reset_ended` event observer, since Moodle's reset form only calls `_reset_course_userdata` hooks for activity modules (`mod_` type), not for report plugins.
+
+Resetting a course without deleting forum posts leaves the existing report data intact.
+
+## Backup and restore
+
+Report data is derived entirely from forum posts, which are themselves included in the standard Moodle course backup. Backing up the Discourse Stats report data separately is therefore not necessary — running a fresh report after restore will produce equivalent results from the restored forum data. No backup or restore implementation is provided.
+
 ## License
 
 GNU GPL v3 or later — see <https://www.gnu.org/licenses/gpl-3.0.html>.

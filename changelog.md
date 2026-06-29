@@ -5,6 +5,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.3] — 2026-06-30
+
+### Fixed
+
+- **CI matrix corrected against Moodle environment requirements** — the previous matrix tested Moodle 5.0 with PHP 8.1 (not supported; minimum is 8.2) and Moodle 5.2 with PHP 8.2 (not supported; minimum is 8.3), and omitted PHP 8.4 from the Moodle 5.0 column (which is supported). Matrix is now: Moodle 5.0 → PHP 8.2–8.4; Moodle 5.1 → PHP 8.2–8.4; Moodle 5.2 → PHP 8.3–8.4.
+- **`results.json` example context missing `showreportlink`** — the companion context file for `results.mustache` did not include the `showreportlink` boolean added in v1.2.0, so the "Complete Report" column was absent from mustache lint renders. Field added (`true`).
+- **Language strings re-sorted alphabetically** — `inactivemembers` and `nationalities` were placed near the top of the file (after `activemembers`) instead of their correct alphabetical positions; `reactionsreceived` appeared after `reporttype_*` entries; `uniqueview` appeared after `unknowncountry`; and the `privacy:metadata:discoursestats_grading_log` block appeared after `discoursestats_results` instead of before it. All 125 strings are now sorted.
+
+---
+
+## [1.2.2] — 2026-06-30
+
+### Added
+
+- **Course reset support** — a new event observer (`\report_discoursestats\event\observer`) subscribes to `\core\event\course_reset_ended`. When a teacher resets a course and selects "Delete all posts" (`reset_forum_all`), all Discourse Stats schedules, per-student results, aggregate results, and grading log entries for that course are automatically deleted. Moodle does not call `_reset_course_userdata` hooks for `report_` type plugins, so an event observer is the correct approach.
+
+### Fixed
+
+- **Privacy provider missing `discoursestats_grading_log` metadata** — `get_metadata()` declared the schedules and results tables but not the grading log, which stores each student's pushed grade and feedback. The table is now registered in `get_metadata()` with its three personal-data fields (`userid`, `rawgrade`, `feedback`), and the corresponding lang strings have been added.
+- **Privacy provider missing `discoursestats_aggregate_results` deletions** — all three deletion functions (`delete_data_for_all_users_in_context`, `delete_data_for_user`, `delete_data_for_users`) omitted the `discoursestats_aggregate_results` table, leaving orphaned aggregate rows when a privacy erasure request was processed. All three functions now delete from this table.
+
+---
+
+## [1.2.1] — 2026-06-30
+
+### Fixed
+
+- **Orphaned aggregate results on schedule auto-purge** — when a new report was submitted, the auto-purge of older non-grading schedules deleted rows from `discoursestats_results` and `discoursestats_schedules` but not from `discoursestats_aggregate_results`, leaving orphaned group/country rows in the database. The purge now covers all three tables.
+- **Raw sub-query DELETEs replaced with Moodle DML API** — the two `$DB->execute()` calls that used `DELETE … WHERE … IN (SELECT …)` sub-queries have been replaced with `$DB->get_fieldset_select()` + `$DB->delete_records_list()`. All database writes now go through the Moodle DML layer.
+- **`count_records_sql()` / `get_record_sql()` replaced with typed API calls** — `count_records_sql()` with a `SELECT COUNT(id) …` string is replaced by `count_records_select()` for the database entry and comment counts; `get_record_sql()` used solely to extract a `COUNT()` result is replaced by `count_records_sql()`; and a plain-WHERE `get_records_sql()` for forum discussions is replaced by `get_records_select()`. Only queries that genuinely require JOINs retain `get_records_sql()`.
+- **Corrected test assertion for operator precedence** — `test_evaluate_formula_parentheses` expected `{posts} + {replies} * 10` (posts=3, replies=2) to evaluate to `5.0`. The formula evaluator correctly applies `*` before `+`, giving `3 + 20 = 23`. Expected value updated to `23.0`.
+
+---
+
 ## [1.2.0] — 2026-06-30
 
 ### Added

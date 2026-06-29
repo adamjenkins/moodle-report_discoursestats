@@ -20,17 +20,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Moodle 5.0: PHP 8.1, 8.2, 8.3 (PHP 8.4 is NOT supported by Moodle 5.0)
-          - php: '8.1'
-            moodle-branch: 'MOODLE_500_STABLE'
-            db: pgsql
+          # Moodle 5.0: PHP 8.2–8.4 (minimum PHP 8.2)
           - php: '8.2'
             moodle-branch: 'MOODLE_500_STABLE'
             db: pgsql
           - php: '8.3'
             moodle-branch: 'MOODLE_500_STABLE'
             db: pgsql
-          # Moodle 5.1: PHP 8.2, 8.3, 8.4
+          - php: '8.4'
+            moodle-branch: 'MOODLE_500_STABLE'
+            db: pgsql
+          # Moodle 5.1: PHP 8.2–8.4 (minimum PHP 8.2)
           - php: '8.2'
             moodle-branch: 'MOODLE_501_STABLE'
             db: pgsql
@@ -40,10 +40,7 @@ jobs:
           - php: '8.4'
             moodle-branch: 'MOODLE_501_STABLE'
             db: pgsql
-          # Moodle 5.2: PHP 8.2, 8.3, 8.4
-          - php: '8.2'
-            moodle-branch: 'MOODLE_502_STABLE'
-            db: pgsql
+          # Moodle 5.2: PHP 8.3–8.4 (minimum PHP 8.3)
           - php: '8.3'
             moodle-branch: 'MOODLE_502_STABLE'
             db: pgsql

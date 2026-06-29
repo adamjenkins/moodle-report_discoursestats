@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version information for the report_discoursestats plugin.
+ * Event observer definitions for report_discoursestats.
  *
  * @package    report_discoursestats
  * @copyright  2026 Adam Jenkins <adam@wisecat.net>
@@ -24,10 +24,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'report_discoursestats';
-$plugin->version   = 2026063005;
-$plugin->requires  = 2022041900; // Moodle 4.0.
-$plugin->maturity  = MATURITY_BETA;
-$plugin->release   = '1.2.3';
-
-$plugin->dependencies = ['mod_forum' => 2022041900];
+$observers = [
+    [
+        'eventname' => '\core\event\course_reset_ended',
+        'callback'  => '\report_discoursestats\event\observer::course_reset_ended',
+    ],
+];

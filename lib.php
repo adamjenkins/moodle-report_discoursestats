@@ -737,11 +737,9 @@ function discoursestats_reactforumenabledforforums(array $forumids, int $coursei
         );
     }
     [$insql, $inparams] = $DB->get_in_or_equal($forumids, SQL_PARAMS_NAMED, 'fid_');
-    return $DB->record_exists_sql(
-        "SELECT 1 FROM {local_reactforum_settings}
-          WHERE forum $insql
-            AND reactiontype != :none
-            AND discussion IS NULL",
+    return $DB->record_exists_select(
+        'local_reactforum_settings',
+        "forum $insql AND reactiontype != :none AND discussion IS NULL",
         array_merge($inparams, ['none' => 'none'])
     );
 }
@@ -777,7 +775,7 @@ function discoursestats_getreactionsgiven(int $userid, int $courseid, array $for
         $params['endtime'] = $endtime;
     }
 
-    $sql = "SELECT COUNT(rr.id) reactionsgiven
+    $sql = "SELECT COUNT(rr.id)
               FROM {local_reactforum_userreactions} rr
               JOIN {forum_posts} fp ON rr.post = fp.id
               JOIN {forum_discussions} fd ON fp.discussion = fd.id
@@ -785,7 +783,7 @@ function discoursestats_getreactionsgiven(int $userid, int $courseid, array $for
                AND {$forumcondition}
                {$timecondition}";
 
-    return (int)($DB->get_record_sql($sql, $params)->reactionsgiven ?? 0);
+    return $DB->count_records_sql($sql, $params);
 }
 
 /**
@@ -819,7 +817,7 @@ function discoursestats_getreactionsreceived(int $userid, int $courseid, array $
         $params['endtime'] = $endtime;
     }
 
-    $sql = "SELECT COUNT(rr.id) received
+    $sql = "SELECT COUNT(rr.id)
               FROM {local_reactforum_userreactions} rr
               JOIN {forum_posts} fp ON rr.post = fp.id
               JOIN {forum_discussions} fd ON fp.discussion = fd.id
@@ -827,7 +825,7 @@ function discoursestats_getreactionsreceived(int $userid, int $courseid, array $
                AND {$forumcondition}
                {$timecondition}";
 
-    return (int)($DB->get_record_sql($sql, $params)->received ?? 0);
+    return $DB->count_records_sql($sql, $params);
 }
 
 /**
@@ -862,8 +860,9 @@ function discoursestats_getdbmodulestats(int $userid, array $dbinstanceids, int 
         $entrycondition  .= ' AND timecreated <= :endtime';
         $entryparams['endtime'] = $endtime;
     }
-    $result->dbentries = (int)$DB->count_records_sql(
-        "SELECT COUNT(id) FROM {data_records} WHERE dataid $idsql AND userid = :userid $entrycondition",
+    $result->dbentries = $DB->count_records_select(
+        'data_records',
+        "dataid $idsql AND userid = :userid $entrycondition",
         $entryparams
     );
 
@@ -888,12 +887,9 @@ function discoursestats_getdbmodulestats(int $userid, array $dbinstanceids, int 
             $commentcondition  .= ' AND timecreated <= :comentime';
             $commentparams['comentime'] = $endtime;
         }
-        $result->dbcomments = (int)$DB->count_records_sql(
-            "SELECT COUNT(id) FROM {comments}
-              WHERE contextid $ctxsql
-                AND userid = :userid
-                AND component = :component
-                $commentcondition",
+        $result->dbcomments = $DB->count_records_select(
+            'comments',
+            "contextid $ctxsql AND userid = :userid AND component = :component $commentcondition",
             $commentparams
         );
     }
@@ -916,20 +912,17 @@ function discoursestats_executeschedule(\stdClass $schedule): bool {
 
         // Remove older finished non-grading schedules for the same user (keep only the latest).
         // Grading schedules (gradingname IS NOT NULL) are never auto-purged; they persist until deleted.
-        $DB->execute(
-            "DELETE FROM {discoursestats_results} WHERE schedule IN (
-                SELECT id FROM {discoursestats_schedules}
-                WHERE userid = ? AND createdtime < ?
-                  AND (gradingname IS NULL OR gradingname = '')
-            )",
-            [$schedule->userid, $schedule->createdtime]
+        $oldscheduleids = $DB->get_fieldset_select(
+            'discoursestats_schedules',
+            'id',
+            'userid = :userid AND createdtime < :created AND (gradingname IS NULL OR gradingname = :empty)',
+            ['userid' => $schedule->userid, 'created' => $schedule->createdtime, 'empty' => '']
         );
-        $DB->execute(
-            "DELETE FROM {discoursestats_schedules}
-             WHERE userid = ? AND createdtime < ?
-               AND (gradingname IS NULL OR gradingname = '')",
-            [$schedule->userid, $schedule->createdtime]
-        );
+        if ($oldscheduleids) {
+            $DB->delete_records_list('discoursestats_results', 'schedule', $oldscheduleids);
+            $DB->delete_records_list('discoursestats_aggregate_results', 'schedule', $oldscheduleids);
+            $DB->delete_records_list('discoursestats_schedules', 'id', $oldscheduleids);
+        }
 
         discoursestats_calculatereport($schedule);
 
@@ -979,10 +972,7 @@ function discoursestats_calculatereport(\stdClass $schedule) {
 
     if (count($forumids) > 0) {
         [$forumsql, $forumparams] = $DB->get_in_or_equal($forumids, SQL_PARAMS_NAMED, 'fid_');
-        $discussions = $DB->get_records_sql(
-            "SELECT fd.id, fd.firstpost FROM {forum_discussions} fd WHERE fd.forum $forumsql",
-            $forumparams
-        );
+        $discussions = $DB->get_records_select('forum_discussions', "forum $forumsql", $forumparams, '', 'id,firstpost');
     } else {
         $discussions = $DB->get_records('forum_discussions', ['course' => $schedule->course], '', 'id,firstpost');
     }
@@ -2076,3 +2066,4 @@ function discoursestats_push_grades(int $scheduleid) {
     // Write audit log (after all grade_update calls to avoid partial logs on exception).
     $DB->insert_records('discoursestats_grading_log', $log);
 }
+

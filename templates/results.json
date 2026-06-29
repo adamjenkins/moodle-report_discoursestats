@@ -39,5 +39,6 @@
             "reporturl": "/report/outline/user.php?id=5&course=2&mode=complete"
         }
     ],
-    "empty": false
+    "empty": false,
+    "showreportlink": true
 }

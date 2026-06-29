@@ -60,6 +60,12 @@ class provider implements
             'replies'   => 'privacy:metadata:discoursestats_results:replies',
         ], 'privacy:metadata:discoursestats_results');
 
+        $collection->add_database_table('discoursestats_grading_log', [
+            'userid'   => 'privacy:metadata:discoursestats_grading_log:userid',
+            'rawgrade' => 'privacy:metadata:discoursestats_grading_log:rawgrade',
+            'feedback' => 'privacy:metadata:discoursestats_grading_log:feedback',
+        ], 'privacy:metadata:discoursestats_grading_log');
+
         return $collection;
     }
 
@@ -141,6 +147,7 @@ class provider implements
         if ($scheduleids) {
             [$sql, $params] = $DB->get_in_or_equal($scheduleids, SQL_PARAMS_NAMED);
             $DB->delete_records_select('discoursestats_results', "schedule $sql", $params);
+            $DB->delete_records_select('discoursestats_aggregate_results', "schedule $sql", $params);
             $DB->delete_records_select('discoursestats_grading_log', "scheduleid $sql", $params);
             $DB->delete_records('discoursestats_schedules', ['course' => $context->instanceid]);
         }
@@ -167,6 +174,7 @@ class provider implements
             if ($scheduleids) {
                 [$sql, $params] = $DB->get_in_or_equal($scheduleids, SQL_PARAMS_NAMED);
                 $DB->delete_records_select('discoursestats_results', "schedule $sql", $params);
+                $DB->delete_records_select('discoursestats_aggregate_results', "schedule $sql", $params);
                 $DB->delete_records_select('discoursestats_grading_log', "scheduleid $sql", $params);
             }
             $DB->delete_records('discoursestats_schedules', ['course' => $context->instanceid, 'userid' => $userid]);
@@ -198,6 +206,7 @@ class provider implements
         if ($scheduleids) {
             [$sql, $params] = $DB->get_in_or_equal($scheduleids, SQL_PARAMS_NAMED);
             $DB->delete_records_select('discoursestats_results', "schedule $sql", $params);
+            $DB->delete_records_select('discoursestats_aggregate_results', "schedule $sql", $params);
             $DB->delete_records_select('discoursestats_grading_log', "scheduleid $sql", $params);
         }
         $DB->delete_records_select(

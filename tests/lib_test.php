@@ -70,7 +70,7 @@ final class lib_test extends \advanced_testcase {
      */
     public function test_evaluate_formula_parentheses(): void {
         $r = $this->make_result(['posts' => 3, 'replies' => 2]);
-        $this->assertEqualsWithDelta(5.0, discoursestats_evaluate_formula('{posts} + {replies} * 10', $r), 0.001);
+        $this->assertEqualsWithDelta(23.0, discoursestats_evaluate_formula('{posts} + {replies} * 10', $r), 0.001);
         $this->assertEqualsWithDelta(50.0, discoursestats_evaluate_formula('({posts} + {replies}) * 10', $r), 0.001);
     }
 
