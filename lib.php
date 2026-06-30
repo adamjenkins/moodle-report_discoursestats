@@ -112,7 +112,7 @@ function discoursestats_addschedule(\stdClass $formdata, \core\context\course $c
     $schedule->userid                = $userid ?: $USER->id;
     $schedule->createdtime           = time();
     $schedule->status                = DISCOURSESTATS_STATUS_SCHEDULED;
-    $schedule->course                = $formdata->course;
+    $schedule->course                = $coursecontext->instanceid;
     $schedule->country               = $formdata->country ?? null;
     $schedule->groupid               = $formdata->group ?? null;
     $schedule->starttime             = $formdata->starttime ?? null;
@@ -463,9 +463,19 @@ function discoursestats_getbasicreports(
         $params['lslendtime'] = $endtime;
     }
 
-    $selectgroupsql = $DB->get_dbfamily() === 'postgres'
-        ? "array_to_string(array_agg(DISTINCT g.groupname), ',') groupnames"
-        : "GROUP_CONCAT(DISTINCT g.groupname SEPARATOR ',') groupnames";
+    switch ($DB->get_dbfamily()) {
+        case 'postgres':
+            $selectgroupsql = "array_to_string(array_agg(DISTINCT g.groupname), ',') groupnames";
+            break;
+        case 'mssql':
+            $selectgroupsql = "STRING_AGG(g.groupname, ',') WITHIN GROUP (ORDER BY g.groupname) groupnames";
+            break;
+        case 'oracle':
+            $selectgroupsql = "LISTAGG(g.groupname, ',') WITHIN GROUP (ORDER BY g.groupname) groupnames";
+            break;
+        default:
+            $selectgroupsql = "GROUP_CONCAT(DISTINCT g.groupname SEPARATOR ',') groupnames";
+    }
 
     $sql = <<<SQL
         SELECT
@@ -936,7 +946,8 @@ function discoursestats_executeschedule(\stdClass $schedule): bool {
         return true;
     } catch (\Throwable $ex) {
         $schedule->status        = DISCOURSESTATS_STATUS_ERROR;
-        $schedule->message       = $ex->getMessage() . "\n" . $ex->getTraceAsString();
+        $schedule->message       = $ex->getMessage();
+        debugging($ex->getMessage() . "\n" . $ex->getTraceAsString(), DEBUG_DEVELOPER);
         $schedule->processedtime = time();
         $DB->update_record('report_discoursestats_schedules', $schedule);
         return false;
@@ -2004,6 +2015,13 @@ function discoursestats_push_grades(int $scheduleid) {
 
     $schedule = $DB->get_record('report_discoursestats_schedules', ['id' => $scheduleid], '*', MUST_EXIST);
     $results  = $DB->get_records('report_discoursestats_results', ['schedule' => $scheduleid]);
+
+    // Defence-in-depth: confirm the schedule creator still holds pushgrades on the schedule's course.
+    $pushcontext = \core\context\course::instance((int)$schedule->course);
+    if (!has_capability('report/discoursestats:pushgrades', $pushcontext, $schedule->userid)) {
+        mtrace('Skipping grade push: creator lacks pushgrades on course ' . $schedule->course);
+        return;
+    }
 
     // Find or create the grade item for this schedule.
     // itemtype='manual' (not 'mod') so grade_item::get_context() uses the course context

@@ -56,10 +56,22 @@ if ($action === 'download') {
         $visiblekeys = discoursestats_getvisiblecolumnkeys($schedule);
         $allheaders  = discoursestats_getresultsheader();
         $csv->add_data(array_values(array_intersect_key($allheaders, array_flip($visiblekeys))));
+        $sanitizecsv = static function (array $row): array {
+            return array_map(static function ($v) {
+                $v = (string)$v;
+                return ($v !== '' && strpbrk($v[0], "=+-@\t\r") !== false) ? "'" . $v : $v;
+            }, $row);
+        };
         foreach ($DB->get_records('report_discoursestats_results', ['schedule' => $schedule->id]) as $result) {
-            $csv->add_data(discoursestats_getresultsrow($result, $visiblekeys));
+            $csv->add_data($sanitizecsv(discoursestats_getresultsrow($result, $visiblekeys)));
         }
     } else {
+        $sanitizecsv = static function (array $row): array {
+            return array_map(static function ($v) {
+                $v = (string)$v;
+                return ($v !== '' && strpbrk($v[0], "=+-@\t\r") !== false) ? "'" . $v : $v;
+            }, $row);
+        };
         $aggheaders  = discoursestats_getaggregateresultsheader($reporttype, $schedule);
         $visiblekeys = array_keys($aggheaders);
         $csv->add_data(array_values($aggheaders));
@@ -70,7 +82,7 @@ if ($action === 'download') {
                 ['s' => $schedule->id, 't' => $reporttype]
             ) as $result
         ) {
-            $csv->add_data(discoursestats_getaggregateresultsrow($result, $visiblekeys));
+            $csv->add_data($sanitizecsv(discoursestats_getaggregateresultsrow($result, $visiblekeys)));
         }
     }
     $csv->download_file();

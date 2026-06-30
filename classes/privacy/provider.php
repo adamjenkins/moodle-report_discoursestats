@@ -66,6 +66,8 @@ class provider implements
             'feedback' => 'privacy:metadata:discoursestats_grading_log:feedback',
         ], 'privacy:metadata:discoursestats_grading_log');
 
+        $collection->add_subsystem_link('core_grades', [], 'privacy:metadata:core_grades');
+
         return $collection;
     }
 
@@ -79,7 +81,7 @@ class provider implements
         $contextlist = new contextlist();
         $sql = "SELECT ctx.id
                   FROM {context} ctx
-                  JOIN {discoursestats_schedules} s ON s.course = ctx.instanceid
+                  JOIN {report_discoursestats_schedules} s ON s.course = ctx.instanceid
                   WHERE ctx.contextlevel = :ctxlevel
                     AND s.userid = :userid";
         $contextlist->add_from_sql($sql, ['ctxlevel' => CONTEXT_COURSE, 'userid' => $userid]);
@@ -96,11 +98,11 @@ class provider implements
         if ($context->contextlevel != CONTEXT_COURSE) {
             return;
         }
-        $sql = "SELECT userid FROM {discoursestats_schedules} WHERE course = :courseid";
+        $sql = "SELECT userid FROM {report_discoursestats_schedules} WHERE course = :courseid";
         $userlist->add_from_sql('userid', $sql, ['courseid' => $context->instanceid]);
         $sql = "SELECT r.userid
-                  FROM {discoursestats_results} r
-                  JOIN {discoursestats_schedules} s ON r.schedule = s.id
+                  FROM {report_discoursestats_results} r
+                  JOIN {report_discoursestats_schedules} s ON r.schedule = s.id
                  WHERE s.course = :courseid";
         $userlist->add_from_sql('userid', $sql, ['courseid' => $context->instanceid]);
     }

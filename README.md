@@ -112,6 +112,10 @@ When a teacher resets a course and selects **Delete all posts** (the forum "All 
 
 Resetting a course without deleting forum posts leaves the existing report data intact.
 
+## Uninstall
+
+When the plugin is uninstalled via **Site administration → Plugins → Plugins overview**, the uninstall hook (`db/uninstall.php`) removes all manual grade items that this plugin created in course gradebooks. Grade items are identified by the `discoursestats_<scheduleid>` idnumber prefix. The plugin tables themselves are dropped by Moodle automatically.
+
 ## Backup and restore
 
 Report data is derived entirely from forum posts, which are themselves included in the standard Moodle course backup. Backing up the Discourse Stats report data separately is therefore not necessary — running a fresh report after restore will produce equivalent results from the restored forum data. No backup or restore implementation is provided.

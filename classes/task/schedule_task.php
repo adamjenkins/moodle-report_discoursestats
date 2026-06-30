@@ -76,11 +76,18 @@ class schedule_task extends \core\task\scheduled_task {
             return;
         }
 
-        // Fetch remaining SCHEDULED records (overdue grading schedules are already
-        // FINISH/ERROR at this point, so they will not appear here).
-        $schedules = $DB->get_records(
+        // Fetch SCHEDULED records, excluding future-dated grading schedules so that they
+        // remain SCHEDULED until their end date passes and the overdue path picks them up.
+        $schedules = $DB->get_records_select(
             'report_discoursestats_schedules',
-            ['status' => DISCOURSESTATS_STATUS_SCHEDULED]
+            'status = :status
+             AND (gradingname IS NULL OR gradingname = :empty
+                  OR endtime IS NULL OR endtime < :now)',
+            [
+                'status' => DISCOURSESTATS_STATUS_SCHEDULED,
+                'empty'  => '',
+                'now'    => time(),
+            ]
         );
 
         foreach ($schedules as $schedule) {

@@ -126,5 +126,10 @@ function xmldb_report_discoursestats_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026063006, 'report', 'discoursestats');
     }
 
+    if ($oldversion < 2026063007) {
+        // Security and quality fixes (no schema changes).
+        upgrade_plugin_savepoint(true, 2026063007, 'report', 'discoursestats');
+    }
+
     return true;
 }

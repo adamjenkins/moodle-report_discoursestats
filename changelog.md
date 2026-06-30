@@ -5,6 +5,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.4] — 2026-06-30
+
+### Security
+
+- **Cross-course gradebook manipulation (high)** — `discoursestats_addschedule()` now derives the schedule's course from the server-validated `$coursecontext->instanceid` instead of the client-controlled hidden form field. A tampered `course` value in the submitted form data is therefore ignored. As a second layer of defence, `discoursestats_push_grades()` now re-checks `report/discoursestats:pushgrades` on the schedule's course (as the schedule creator) before creating any grade item; if the capability is absent the push is silently skipped and logged via `mtrace()`.
+
+### Fixed
+
+- **Privacy API broken (medium)** — `get_contexts_for_userid()` and `get_users_in_context()` were still referencing the pre-rename table names (`{discoursestats_schedules}`, `{discoursestats_results}`), causing both methods to throw a `dml_exception` on any GDPR export or erasure request. All three table references are updated to the current `{report_discoursestats_*}` names.
+- **Future-dated grading schedules never graded (low)** — the regular scheduled-task run fetched all `SCHEDULED` rows, including grading schedules whose end date was still in the future, moved them to `FINISH`, and then never triggered grade push because `endtime > time()`. The regular-run query now excludes rows that have a grading name and a future end date; those schedules remain `SCHEDULED` until the overdue-grading path picks them up.
+- **Raw exception stack trace shown in UI (low)** — when a schedule run threw, the full stack trace (including server paths and query fragments) was stored in `schedule->message` and displayed on the schedule detail page. Only `getMessage()` is now stored; the trace is forwarded to `debugging()` at `DEBUG_DEVELOPER`.
+- **CSV formula injection (low)** — user-derived fields in the CSV export (`username`, names, group names, institution, country) were written verbatim, allowing a value starting with `=`, `+`, `-`, `@`, tab, or carriage return to be interpreted as a spreadsheet formula. Both the student-report and aggregate-report export paths now prefix a `'` guard on any cell whose first character is one of those characters.
+- **Missing `invalidentgmethod` lang string (low)** — `engagement::getstring()` and `getinstancefrommethod()` both throw `moodle_exception('invalidentgmethod', ...)` for an unknown method, but the key was absent from the lang file; Moodle would display `[[invalidentgmethod]]` in the error page. String added.
+- **Non-portable `GROUP_CONCAT` SQL (low)** — the group-name aggregate in `discoursestats_getbasicreports()` used `GROUP_CONCAT(DISTINCT … SEPARATOR ',')` as the fallback for all non-PostgreSQL engines. The conditional now uses a `switch` on `$DB->get_dbfamily()`: `array_to_string(array_agg(DISTINCT …))` for PostgreSQL, `STRING_AGG(… ORDER BY …)` for MSSQL, `LISTAGG(… ORDER BY …)` for Oracle, and the original `GROUP_CONCAT` for MySQL/MariaDB.
+
+### Added
+
+- **`db/uninstall.php`** — adds an `xmldb_report_discoursestats_uninstall()` hook that locates all `grade_item` records with `idnumber` matching the `discoursestats_<id>` prefix and deletes them via the grade API. Previously, uninstalling the plugin left these manual grade items orphaned in course gradebooks.
+- **`core_grades` subsystem link in privacy metadata** — `get_metadata()` now declares the link to `core_grades`, reflecting that this plugin writes grade data to the Moodle gradebook on behalf of users.
+- **`db/install.xml` VERSION aligned** — the XMLDB file version is updated to `2026063006` to match the plugin's current version, eliminating a cosmetic mismatch that could cause confusion.
+
+---
+
 ## [1.2.3] — 2026-06-30
 
 ### Fixed
