@@ -2077,4 +2077,3 @@ function discoursestats_push_grades(int $scheduleid) {
     // Write audit log (after all grade_update calls to avoid partial logs on exception).
     $DB->insert_records('report_discoursestats_grading_log', $log);
 }
-

@@ -117,7 +117,10 @@ class provider implements
             if ($context->contextlevel != CONTEXT_COURSE) {
                 continue;
             }
-            $schedules = $DB->get_records('report_discoursestats_schedules', ['userid' => $userid, 'course' => $context->instanceid]);
+            $schedules = $DB->get_records(
+                'report_discoursestats_schedules',
+                ['userid' => $userid, 'course' => $context->instanceid]
+            );
             foreach ($schedules as $schedule) {
                 $results = $DB->get_records('report_discoursestats_results', ['schedule' => $schedule->id, 'userid' => $userid]);
                 writer::with_context($context)->export_data(
