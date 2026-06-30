@@ -45,13 +45,13 @@ class provider implements
      * @return collection
      */
     public static function get_metadata(collection $collection): collection {
-        $collection->add_database_table('discoursestats_schedules', [
+        $collection->add_database_table('report_discoursestats_schedules', [
             'userid'      => 'privacy:metadata:discoursestats_schedules:userid',
             'course'      => 'privacy:metadata:discoursestats_schedules:course',
             'createdtime' => 'privacy:metadata:discoursestats_schedules:createdtime',
         ], 'privacy:metadata:discoursestats_schedules');
 
-        $collection->add_database_table('discoursestats_results', [
+        $collection->add_database_table('report_discoursestats_results', [
             'userid'    => 'privacy:metadata:discoursestats_results:userid',
             'username'  => 'privacy:metadata:discoursestats_results:username',
             'firstname' => 'privacy:metadata:discoursestats_results:firstname',
@@ -60,7 +60,7 @@ class provider implements
             'replies'   => 'privacy:metadata:discoursestats_results:replies',
         ], 'privacy:metadata:discoursestats_results');
 
-        $collection->add_database_table('discoursestats_grading_log', [
+        $collection->add_database_table('report_discoursestats_grading_log', [
             'userid'   => 'privacy:metadata:discoursestats_grading_log:userid',
             'rawgrade' => 'privacy:metadata:discoursestats_grading_log:rawgrade',
             'feedback' => 'privacy:metadata:discoursestats_grading_log:feedback',
@@ -117,9 +117,9 @@ class provider implements
             if ($context->contextlevel != CONTEXT_COURSE) {
                 continue;
             }
-            $schedules = $DB->get_records('discoursestats_schedules', ['userid' => $userid, 'course' => $context->instanceid]);
+            $schedules = $DB->get_records('report_discoursestats_schedules', ['userid' => $userid, 'course' => $context->instanceid]);
             foreach ($schedules as $schedule) {
-                $results = $DB->get_records('discoursestats_results', ['schedule' => $schedule->id, 'userid' => $userid]);
+                $results = $DB->get_records('report_discoursestats_results', ['schedule' => $schedule->id, 'userid' => $userid]);
                 writer::with_context($context)->export_data(
                     ['report_discoursestats', 'schedule_' . $schedule->id],
                     (object)['schedule' => $schedule, 'results' => array_values($results)]
@@ -139,17 +139,17 @@ class provider implements
             return;
         }
         $scheduleids = $DB->get_fieldset_select(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             'id',
             'course = :course',
             ['course' => $context->instanceid]
         );
         if ($scheduleids) {
             [$sql, $params] = $DB->get_in_or_equal($scheduleids, SQL_PARAMS_NAMED);
-            $DB->delete_records_select('discoursestats_results', "schedule $sql", $params);
-            $DB->delete_records_select('discoursestats_aggregate_results', "schedule $sql", $params);
-            $DB->delete_records_select('discoursestats_grading_log', "scheduleid $sql", $params);
-            $DB->delete_records('discoursestats_schedules', ['course' => $context->instanceid]);
+            $DB->delete_records_select('report_discoursestats_results', "schedule $sql", $params);
+            $DB->delete_records_select('report_discoursestats_aggregate_results', "schedule $sql", $params);
+            $DB->delete_records_select('report_discoursestats_grading_log', "scheduleid $sql", $params);
+            $DB->delete_records('report_discoursestats_schedules', ['course' => $context->instanceid]);
         }
     }
 
@@ -166,18 +166,18 @@ class provider implements
                 continue;
             }
             $scheduleids = $DB->get_fieldset_select(
-                'discoursestats_schedules',
+                'report_discoursestats_schedules',
                 'id',
                 'course = :course AND userid = :userid',
                 ['course' => $context->instanceid, 'userid' => $userid]
             );
             if ($scheduleids) {
                 [$sql, $params] = $DB->get_in_or_equal($scheduleids, SQL_PARAMS_NAMED);
-                $DB->delete_records_select('discoursestats_results', "schedule $sql", $params);
-                $DB->delete_records_select('discoursestats_aggregate_results', "schedule $sql", $params);
-                $DB->delete_records_select('discoursestats_grading_log', "scheduleid $sql", $params);
+                $DB->delete_records_select('report_discoursestats_results', "schedule $sql", $params);
+                $DB->delete_records_select('report_discoursestats_aggregate_results', "schedule $sql", $params);
+                $DB->delete_records_select('report_discoursestats_grading_log', "scheduleid $sql", $params);
             }
-            $DB->delete_records('discoursestats_schedules', ['course' => $context->instanceid, 'userid' => $userid]);
+            $DB->delete_records('report_discoursestats_schedules', ['course' => $context->instanceid, 'userid' => $userid]);
         }
     }
 
@@ -198,19 +198,19 @@ class provider implements
         }
         [$usersql, $userparams] = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED, 'uid_');
         $scheduleids = $DB->get_fieldset_select(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             'id',
             "course = :course AND userid $usersql",
             array_merge(['course' => $context->instanceid], $userparams)
         );
         if ($scheduleids) {
             [$sql, $params] = $DB->get_in_or_equal($scheduleids, SQL_PARAMS_NAMED);
-            $DB->delete_records_select('discoursestats_results', "schedule $sql", $params);
-            $DB->delete_records_select('discoursestats_aggregate_results', "schedule $sql", $params);
-            $DB->delete_records_select('discoursestats_grading_log', "scheduleid $sql", $params);
+            $DB->delete_records_select('report_discoursestats_results', "schedule $sql", $params);
+            $DB->delete_records_select('report_discoursestats_aggregate_results', "schedule $sql", $params);
+            $DB->delete_records_select('report_discoursestats_grading_log', "scheduleid $sql", $params);
         }
         $DB->delete_records_select(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             "course = :course AND userid $usersql",
             array_merge(['course' => $context->instanceid], $userparams)
         );

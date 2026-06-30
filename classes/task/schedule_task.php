@@ -55,7 +55,7 @@ class schedule_task extends \core\task\scheduled_task {
         // regardless of the configured execution-hour guard so that grades are pushed as
         // soon as the 5-minute cron fires after the end date.
         $overduegradings = $DB->get_records_select(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             'status = :status
              AND gradingname IS NOT NULL AND gradingname != :empty
              AND endtime IS NOT NULL AND endtime < :now',
@@ -79,7 +79,7 @@ class schedule_task extends \core\task\scheduled_task {
         // Fetch remaining SCHEDULED records (overdue grading schedules are already
         // FINISH/ERROR at this point, so they will not appear here).
         $schedules = $DB->get_records(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             ['status' => DISCOURSESTATS_STATUS_SCHEDULED]
         );
 

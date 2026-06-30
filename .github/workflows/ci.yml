@@ -109,7 +109,7 @@ jobs:
 
       - name: Mustache Lint
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci mustachelint
+        run: moodle-plugin-ci mustache
 
       - name: PHP Unit tests
         if: ${{ !cancelled() }}

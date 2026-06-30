@@ -41,7 +41,7 @@ require_capability('report/discoursestats:view', $coursecontext);
 $haspushgrades = has_capability('report/discoursestats:pushgrades', $coursecontext);
 
 $hasreportinqueue = $DB->count_records_select(
-    'discoursestats_schedules',
+    'report_discoursestats_schedules',
     'userid = :userid AND status = :status AND (gradingname IS NULL OR gradingname = :empty)',
     ['userid' => $USER->id, 'status' => DISCOURSESTATS_STATUS_SCHEDULED, 'empty' => '']
 ) > 0;
@@ -75,7 +75,7 @@ if ($haspushgrades) {
     // Pre-populate form when copying an existing grading schedule.
     if ($copygrading) {
         $copyrec = $DB->get_record_select(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             'id = :id AND course = :course AND gradingname IS NOT NULL AND gradingname != :empty',
             ['id' => $copygrading, 'course' => $courseid, 'empty' => '']
         );

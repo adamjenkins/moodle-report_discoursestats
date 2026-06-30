@@ -32,7 +32,7 @@ use report_discoursestats\forms\deleteconfirm_form;
 $id     = required_param('id', PARAM_INT);
 $action = optional_param('action', 'view', PARAM_ALPHA);
 
-$schedule = $DB->get_record('discoursestats_schedules', ['id' => $id], '*', MUST_EXIST);
+$schedule = $DB->get_record('report_discoursestats_schedules', ['id' => $id], '*', MUST_EXIST);
 $course   = $DB->get_record('course', ['id' => $schedule->course], '*', MUST_EXIST);
 
 require_login($course);
@@ -56,15 +56,20 @@ if ($action === 'download') {
         $visiblekeys = discoursestats_getvisiblecolumnkeys($schedule);
         $allheaders  = discoursestats_getresultsheader();
         $csv->add_data(array_values(array_intersect_key($allheaders, array_flip($visiblekeys))));
-        foreach ($DB->get_records('discoursestats_results', ['schedule' => $schedule->id]) as $result) {
+        foreach ($DB->get_records('report_discoursestats_results', ['schedule' => $schedule->id]) as $result) {
             $csv->add_data(discoursestats_getresultsrow($result, $visiblekeys));
         }
     } else {
         $aggheaders  = discoursestats_getaggregateresultsheader($reporttype, $schedule);
         $visiblekeys = array_keys($aggheaders);
         $csv->add_data(array_values($aggheaders));
-        foreach ($DB->get_records_select('discoursestats_aggregate_results',
-            'schedule = :s AND reporttype = :t', ['s' => $schedule->id, 't' => $reporttype]) as $result) {
+        foreach (
+            $DB->get_records_select(
+                'report_discoursestats_aggregate_results',
+                'schedule = :s AND reporttype = :t',
+                ['s' => $schedule->id, 't' => $reporttype]
+            ) as $result
+        ) {
             $csv->add_data(discoursestats_getaggregateresultsrow($result, $visiblekeys));
         }
     }
@@ -168,7 +173,7 @@ if ($action === 'view') {
         if ($reporttype === DISCOURSESTATS_REPORTTYPE_STUDENT) {
             $visiblekeys = discoursestats_getvisiblecolumnkeys($schedule);
             $sort        = discoursestats_getsort($sortname, $sorttype);
-            $results     = $DB->get_records('discoursestats_results', ['schedule' => $schedule->id], $sort);
+            $results     = $DB->get_records('report_discoursestats_results', ['schedule' => $schedule->id], $sort);
             $rows        = [];
             foreach ($results as $result) {
                 $rows[] = [
@@ -191,7 +196,7 @@ if ($action === 'view') {
             $visiblekeys = array_keys($aggheaders);
             $sort        = discoursestats_getaggregatesort($sortname, $sorttype, $reporttype, $schedule);
             $results     = $DB->get_records_select(
-                'discoursestats_aggregate_results',
+                'report_discoursestats_aggregate_results',
                 'schedule = :s AND reporttype = :t',
                 ['s' => $schedule->id, 't' => $reporttype],
                 $sort
@@ -204,7 +209,13 @@ if ($action === 'view') {
                 ];
             }
             echo $OUTPUT->render_from_template('report_discoursestats/results', [
-                'headers'        => discoursestats_getaggregateresultsheadercontext($schedule->id, $visiblekeys, $aggheaders, $sortname, $sorttype),
+                'headers'        => discoursestats_getaggregateresultsheadercontext(
+                    $schedule->id,
+                    $visiblekeys,
+                    $aggheaders,
+                    $sortname,
+                    $sorttype
+                ),
                 'rows'           => $rows,
                 'empty'          => count($rows) === 0,
                 'showreportlink' => false,

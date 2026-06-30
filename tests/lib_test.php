@@ -16,6 +16,11 @@
 
 namespace report_discoursestats;
 
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->dirroot . '/report/discoursestats/lib.php');
+
 /**
  * Unit tests for report_discoursestats lib.php functions.
  *

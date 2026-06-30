@@ -47,7 +47,7 @@ class observer {
 
         $courseid = $event->courseid;
         $scheduleids = $DB->get_fieldset_select(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             'id',
             'course = :course',
             ['course' => $courseid]
@@ -55,9 +55,9 @@ class observer {
         if (!$scheduleids) {
             return;
         }
-        $DB->delete_records_list('discoursestats_results', 'schedule', $scheduleids);
-        $DB->delete_records_list('discoursestats_aggregate_results', 'schedule', $scheduleids);
-        $DB->delete_records_list('discoursestats_grading_log', 'scheduleid', $scheduleids);
-        $DB->delete_records_list('discoursestats_schedules', 'id', $scheduleids);
+        $DB->delete_records_list('report_discoursestats_results', 'schedule', $scheduleids);
+        $DB->delete_records_list('report_discoursestats_aggregate_results', 'schedule', $scheduleids);
+        $DB->delete_records_list('report_discoursestats_grading_log', 'scheduleid', $scheduleids);
+        $DB->delete_records_list('report_discoursestats_schedules', 'id', $scheduleids);
     }
 }

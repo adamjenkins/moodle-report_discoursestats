@@ -110,5 +110,21 @@ function xmldb_report_discoursestats_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026063002, 'report', 'discoursestats');
     }
 
+    if ($oldversion < 2026063006) {
+        $renames = [
+            'discoursestats_schedules'         => 'report_discoursestats_schedules',
+            'discoursestats_results'           => 'report_discoursestats_results',
+            'discoursestats_grading_log'       => 'report_discoursestats_grading_log',
+            'discoursestats_aggregate_results' => 'report_discoursestats_aggregate_results',
+        ];
+        foreach ($renames as $oldname => $newname) {
+            $oldtable = new xmldb_table($oldname);
+            if ($dbman->table_exists($oldtable)) {
+                $dbman->rename_table($oldtable, $newname);
+            }
+        }
+        upgrade_plugin_savepoint(true, 2026063006, 'report', 'discoursestats');
+    }
+
     return true;
 }

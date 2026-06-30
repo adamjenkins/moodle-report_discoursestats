@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'report_discoursestats';
-$plugin->version   = 2026063005;
+$plugin->version   = 2026063006;
 $plugin->requires  = 2022041900; // Moodle 4.0.
 $plugin->maturity  = MATURITY_BETA;
 $plugin->release   = '1.2.3';

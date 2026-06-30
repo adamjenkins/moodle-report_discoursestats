@@ -71,10 +71,10 @@ function report_discoursestats_extend_navigation_course($navigation, $course, $c
  */
 function discoursestats_removeschedule(int $scheduleid) {
     global $DB;
-    $DB->delete_records('discoursestats_results', ['schedule' => $scheduleid]);
-    $DB->delete_records('discoursestats_aggregate_results', ['schedule' => $scheduleid]);
-    $DB->delete_records('discoursestats_grading_log', ['scheduleid' => $scheduleid]);
-    $DB->delete_records('discoursestats_schedules', ['id' => $scheduleid]);
+    $DB->delete_records('report_discoursestats_results', ['schedule' => $scheduleid]);
+    $DB->delete_records('report_discoursestats_aggregate_results', ['schedule' => $scheduleid]);
+    $DB->delete_records('report_discoursestats_grading_log', ['scheduleid' => $scheduleid]);
+    $DB->delete_records('report_discoursestats_schedules', ['id' => $scheduleid]);
 }
 
 /**
@@ -86,7 +86,7 @@ function discoursestats_removeexistingschedule(int $userid = 0) {
     global $DB, $USER;
     $userid = $userid ?: $USER->id;
     $schedules = $DB->get_records_select(
-        'discoursestats_schedules',
+        'report_discoursestats_schedules',
         'userid = :userid AND status = :status AND (gradingname IS NULL OR gradingname = :empty)',
         ['userid' => $userid, 'status' => DISCOURSESTATS_STATUS_SCHEDULED, 'empty' => ''],
         '',
@@ -147,7 +147,7 @@ function discoursestats_addschedule(\stdClass $formdata, \core\context\course $c
     $schedule->gradingcategory = isset($formdata->gradingcategory) ? (int)$formdata->gradingcategory : 0;
     $schedule->gradinghidden   = !empty($formdata->gradinghidden) ? 1 : 0;
 
-    $schedule->id = $DB->insert_record('discoursestats_schedules', $schedule);
+    $schedule->id = $DB->insert_record('report_discoursestats_schedules', $schedule);
 
     if (!empty($formdata->instant) && has_capability('report/discoursestats:getinstantreport', $coursecontext)) {
         discoursestats_executeschedule($schedule);
@@ -246,7 +246,7 @@ function discoursestats_getreportscontext(int $userid): array {
     global $DB;
     $reports = [];
     $records = $DB->get_records_select(
-        'discoursestats_schedules',
+        'report_discoursestats_schedules',
         'userid = :userid AND (gradingname IS NULL OR gradingname = :empty)',
         ['userid' => $userid, 'empty' => ''],
         'createdtime DESC'
@@ -280,7 +280,7 @@ function discoursestats_getgradingschedulescontext(int $courseid): array {
     global $DB;
     $schedules = [];
     $records = $DB->get_records_select(
-        'discoursestats_schedules',
+        'report_discoursestats_schedules',
         'course = :course AND gradingname IS NOT NULL AND gradingname != :empty',
         ['course' => $courseid, 'empty' => ''],
         'createdtime DESC'
@@ -908,27 +908,27 @@ function discoursestats_executeschedule(\stdClass $schedule): bool {
     try {
         $schedule->status        = DISCOURSESTATS_STATUS_EXECUTING;
         $schedule->processedtime = time();
-        $DB->update_record('discoursestats_schedules', $schedule);
+        $DB->update_record('report_discoursestats_schedules', $schedule);
 
         // Remove older finished non-grading schedules for the same user (keep only the latest).
         // Grading schedules (gradingname IS NOT NULL) are never auto-purged; they persist until deleted.
         $oldscheduleids = $DB->get_fieldset_select(
-            'discoursestats_schedules',
+            'report_discoursestats_schedules',
             'id',
             'userid = :userid AND createdtime < :created AND (gradingname IS NULL OR gradingname = :empty)',
             ['userid' => $schedule->userid, 'created' => $schedule->createdtime, 'empty' => '']
         );
         if ($oldscheduleids) {
-            $DB->delete_records_list('discoursestats_results', 'schedule', $oldscheduleids);
-            $DB->delete_records_list('discoursestats_aggregate_results', 'schedule', $oldscheduleids);
-            $DB->delete_records_list('discoursestats_schedules', 'id', $oldscheduleids);
+            $DB->delete_records_list('report_discoursestats_results', 'schedule', $oldscheduleids);
+            $DB->delete_records_list('report_discoursestats_aggregate_results', 'schedule', $oldscheduleids);
+            $DB->delete_records_list('report_discoursestats_schedules', 'id', $oldscheduleids);
         }
 
         discoursestats_calculatereport($schedule);
 
         $schedule->status        = DISCOURSESTATS_STATUS_FINISH;
         $schedule->processedtime = time();
-        $DB->update_record('discoursestats_schedules', $schedule);
+        $DB->update_record('report_discoursestats_schedules', $schedule);
 
         // Trigger grading if end date has passed and grading is configured.
         discoursestats_maybe_queue_grading($schedule);
@@ -938,7 +938,7 @@ function discoursestats_executeschedule(\stdClass $schedule): bool {
         $schedule->status        = DISCOURSESTATS_STATUS_ERROR;
         $schedule->message       = $ex->getMessage() . "\n" . $ex->getTraceAsString();
         $schedule->processedtime = time();
-        $DB->update_record('discoursestats_schedules', $schedule);
+        $DB->update_record('report_discoursestats_schedules', $schedule);
         return false;
     }
 }
@@ -1160,12 +1160,12 @@ function discoursestats_calculatereport(\stdClass $schedule) {
     $reporttype = (int)($schedule->reporttype ?? DISCOURSESTATS_REPORTTYPE_STUDENT);
     if ($reporttype === DISCOURSESTATS_REPORTTYPE_GROUP) {
         $aggregates = discoursestats_aggregatebygroup($results, $schedule);
-        $DB->insert_records('discoursestats_aggregate_results', $aggregates);
+        $DB->insert_records('report_discoursestats_aggregate_results', $aggregates);
     } else if ($reporttype === DISCOURSESTATS_REPORTTYPE_COUNTRY) {
         $aggregates = discoursestats_aggregatebycountry($results, $schedule);
-        $DB->insert_records('discoursestats_aggregate_results', $aggregates);
+        $DB->insert_records('report_discoursestats_aggregate_results', $aggregates);
     } else {
-        $DB->insert_records('discoursestats_results', $results);
+        $DB->insert_records('report_discoursestats_results', $results);
     }
 }
 
@@ -1195,7 +1195,7 @@ function discoursestats_maybe_queue_grading(\stdClass $schedule) {
     \core\task\manager::queue_adhoc_task($task, true);
 
     $schedule->gradingtriggered = 1;
-    $DB->update_record('discoursestats_schedules', $schedule);
+    $DB->update_record('report_discoursestats_schedules', $schedule);
 }
 
 /**
@@ -1280,7 +1280,12 @@ function discoursestats_getresultsheader(): array {
  * @param string   $sorttype
  * @return array
  */
-function discoursestats_getresultsheadercontext(int $scheduleid, array $visiblekeys, $sortname = null, string $sorttype = 'asc'): array {
+function discoursestats_getresultsheadercontext(
+    int $scheduleid,
+    array $visiblekeys,
+    $sortname = null,
+    string $sorttype = 'asc'
+): array {
     $sorttype   = strtolower($sorttype);
     $fliptype   = $sorttype === 'asc' ? 'desc' : 'asc';
     $allheaders = discoursestats_getresultsheader();
@@ -1345,8 +1350,8 @@ function discoursestats_getresultsrow(\stdClass $record, array $visiblekeys): ar
         'averageengagement' => $record->averageengagement,
         'maximumengagement' => $record->maximumengagement,
         'firstpost'         => $record->firstpost ? userdate($record->firstpost, $dateformat) : '',
-        'lastpost'          => $record->lastpost  ? userdate($record->lastpost,  $dateformat) : '',
-        'reactionsgiven'    => $record->reactionsgiven    ?? '',
+        'lastpost'          => $record->lastpost ? userdate($record->lastpost, $dateformat) : '',
+        'reactionsgiven'    => $record->reactionsgiven ?? '',
         'reactionsreceived' => $record->reactionsreceived ?? '',
     ];
     return array_values(array_map(static fn($k) => $all[$k] ?? '', $visiblekeys));
@@ -1447,7 +1452,13 @@ function discoursestats_getaggregateresultsheader(int $reporttype, \stdClass $sc
  * @param string   $sorttype
  * @return array
  */
-function discoursestats_getaggregateresultsheadercontext(int $scheduleid, array $visiblekeys, array $allheaders, $sortname = null, string $sorttype = 'asc'): array {
+function discoursestats_getaggregateresultsheadercontext(
+    int $scheduleid,
+    array $visiblekeys,
+    array $allheaders,
+    $sortname = null,
+    string $sorttype = 'asc'
+): array {
     $sorttype = strtolower($sorttype);
     $fliptype = $sorttype === 'asc' ? 'desc' : 'asc';
     $items    = [];
@@ -1991,8 +2002,8 @@ function discoursestats_push_grades(int $scheduleid) {
     global $CFG, $DB;
     require_once($CFG->libdir . '/gradelib.php');
 
-    $schedule = $DB->get_record('discoursestats_schedules', ['id' => $scheduleid], '*', MUST_EXIST);
-    $results  = $DB->get_records('discoursestats_results', ['schedule' => $scheduleid]);
+    $schedule = $DB->get_record('report_discoursestats_schedules', ['id' => $scheduleid], '*', MUST_EXIST);
+    $results  = $DB->get_records('report_discoursestats_results', ['schedule' => $scheduleid]);
 
     // Find or create the grade item for this schedule.
     // itemtype='manual' (not 'mod') so grade_item::get_context() uses the course context
@@ -2064,6 +2075,6 @@ function discoursestats_push_grades(int $scheduleid) {
     }
 
     // Write audit log (after all grade_update calls to avoid partial logs on exception).
-    $DB->insert_records('discoursestats_grading_log', $log);
+    $DB->insert_records('report_discoursestats_grading_log', $log);
 }
 

@@ -4,7 +4,7 @@
        xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
     <TABLES>
-        <TABLE NAME="discoursestats_schedules" COMMENT="Discourse Stats Report Schedules">
+        <TABLE NAME="report_discoursestats_schedules" COMMENT="Discourse Stats Report Schedules">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
                 <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
@@ -41,7 +41,7 @@
                 <INDEX NAME="course_idx" UNIQUE="false" FIELDS="course"/>
             </INDEXES>
         </TABLE>
-        <TABLE NAME="discoursestats_aggregate_results" COMMENT="Discourse Stats Group/Country Aggregate Report Results">
+        <TABLE NAME="report_discoursestats_aggregate_results" COMMENT="Discourse Stats Group/Country Aggregate Report Results">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
                 <FIELD NAME="schedule" TYPE="int" LENGTH="10" NOTNULL="true"/>
@@ -83,7 +83,7 @@
                 <INDEX NAME="schedule_idx" UNIQUE="false" FIELDS="schedule"/>
             </INDEXES>
         </TABLE>
-        <TABLE NAME="discoursestats_results" COMMENT="Discourse Stats Report Results">
+        <TABLE NAME="report_discoursestats_results" COMMENT="Discourse Stats Report Results">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
                 <FIELD NAME="schedule" TYPE="int" LENGTH="10" NOTNULL="true"/>
@@ -129,7 +129,7 @@
                 <INDEX NAME="userid_idx" UNIQUE="false" FIELDS="userid"/>
             </INDEXES>
         </TABLE>
-        <TABLE NAME="discoursestats_grading_log" COMMENT="Discourse Stats Grading Audit Log">
+        <TABLE NAME="report_discoursestats_grading_log" COMMENT="Discourse Stats Grading Audit Log">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
                 <FIELD NAME="scheduleid" TYPE="int" LENGTH="10" NOTNULL="true"/>
